@@ -4,46 +4,9 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="8a677ee5-6164-4f3f-a06f-9e7691242c76" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/St_J_subject_Mean_84/Single_run_84_one_temp.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+    <list default="true" id="8a677ee5-6164-4f3f-a06f-9e7691242c76" name="Changes" comment="CHaning the Intial matrix for a high energy Spin matrix">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backups/St_J_subject_Mean_Testing_10_03/Full_Core.py" beforeDir="false" afterPath="$PROJECT_DIR$/Backups/St_J_subject_Mean_Testing_10_03/Full_Core.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backups/St_J_subject_Mean_Testing_10_03/Full_Core_New.py" beforeDir="false" afterPath="$PROJECT_DIR$/Backups/St_J_subject_Mean_Testing_10_03/Full_Core_New.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backups/St_J_subject_Mean_Testing_10_03/Run_For_all_Subjects_Testing.py" beforeDir="false" afterPath="$PROJECT_DIR$/Backups/St_J_subject_Mean_Testing_10_03/Run_For_all_Subjects_Testing.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Backups/St_J_subject_Mean_Testing_10_03/Run_For_all_Subjects_Testing_Other_new.py" beforeDir="false" afterPath="$PROJECT_DIR$/Backups/St_J_subject_Mean_Testing_10_03/Run_For_all_Subjects_Testing_Other_new.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Core_Ising.py" beforeDir="false" afterPath="$PROJECT_DIR$/Core_Ising.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_84_NEW_MS/Backups/Run_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_84_NEW_MS/Backups/Run_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_84_Testing_new/Backups/Run_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_84_Testing_new/Backups/Run_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_84_new_optimisation/Backups/Run_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_84_new_optimisation/Backups/Run_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_84_new_optimisation_New_temperatures/Backups/Run_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_84_new_optimisation_New_temperatures/Backups/Run_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_Steps_mc/Backups/Run_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_Steps_mc/Backups/Run_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_both_optimize/Backups/Run_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_both_optimize/Backups/Run_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_both_optimize_Testing_Times/Backups/Run_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_both_optimize_Testing_Times/Backups/Run_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_mu_zero/Backups/Run_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_mu_zero/Backups/Run_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_new_MC/Backups/Run_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_new_MC/Backups/Run_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_norm_optimize/Backups/Run_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_norm_optimize/Backups/Run_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_random/Backups/Run_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/Previous_Runs/St_J_subject_Run_random/Backups/Run_model.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Run_model.py" beforeDir="false" afterPath="$PROJECT_DIR$/Run_model.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/St_J_subject_Mean_84/Full_Core.py" beforeDir="false" afterPath="$PROJECT_DIR$/St_J_subject_Mean_84/Full_Core.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/St_J_subject_Mean_84/Run_For_all_Subjects_Testing.py" beforeDir="false" afterPath="$PROJECT_DIR$/St_J_subject_Mean_84/Run_For_all_Subjects_Testing.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/St_J_subject_Mean_FC_Jij/Full_Core.py" beforeDir="false" afterPath="$PROJECT_DIR$/St_J_subject_Mean_FC_Jij/Full_Core.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/St_J_subject_Mean_FC_Jij/Run_For_all_Subjects_Testing.py" beforeDir="false" afterPath="$PROJECT_DIR$/St_J_subject_Mean_FC_Jij/Run_For_all_Subjects_Testing.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/St_J_subject_Mean_FC_Jij_indivdual_subjects/Full_Core.py" beforeDir="false" afterPath="$PROJECT_DIR$/St_J_subject_Mean_FC_Jij_indivdual_subjects/Full_Core.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/St_J_subject_Mean_FC_Jij_indivdual_subjects/Run_For_all_Subjects_Testing.py" beforeDir="false" afterPath="$PROJECT_DIR$/St_J_subject_Mean_FC_Jij_indivdual_subjects/Run_For_all_Subjects_Testing.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/St_J_subject_Mean_FC_Jij_indivdual_subjects_without_mu/Full_Core.py" beforeDir="false" afterPath="$PROJECT_DIR$/St_J_subject_Mean_FC_Jij_indivdual_subjects_without_mu/Full_Core.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/St_J_subject_Mean_FC_Jij_indivdual_subjects_without_mu/Run_For_all_Subjects_Testing.py" beforeDir="false" afterPath="$PROJECT_DIR$/St_J_subject_Mean_FC_Jij_indivdual_subjects_without_mu/Run_For_all_Subjects_Testing.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/St_J_subject_Mean_Testing_10_21/Backups/Run_For_all_Subjects_Testing_Other_new.py" beforeDir="false" afterPath="$PROJECT_DIR$/St_J_subject_Mean_Testing_10_21/Backups/Run_For_all_Subjects_Testing_Other_new.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/St_J_subject_Mean_Testing_10_21/Calculating_means.py" beforeDir="false" afterPath="$PROJECT_DIR$/St_J_subject_Mean_Testing_10_21/Calculating_means.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/St_J_subject_Mean_Testing_10_21/Full_Core.py" beforeDir="false" afterPath="$PROJECT_DIR$/St_J_subject_Mean_Testing_10_21/Full_Core.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/St_J_subject_Mean_Testing_10_21/Run_For_all_Subjects_Testing.py" beforeDir="false" afterPath="$PROJECT_DIR$/St_J_subject_Mean_Testing_10_21/Run_For_all_Subjects_Testing.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Statstics_Parcellationns/Testing4.py" beforeDir="false" afterPath="$PROJECT_DIR$/Statstics_Parcellationns/Testing4.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Statstics_Parcellationns/Testing_New3.py" beforeDir="false" afterPath="$PROJECT_DIR$/Statstics_Parcellationns/Testing_New3.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Statstics_Parcellationns/Testing_absolute values.py" beforeDir="false" afterPath="$PROJECT_DIR$/Statstics_Parcellationns/Testing_absolute values.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Statstics_Parcellationns/Testing_absolute values_RUN.py" beforeDir="false" afterPath="$PROJECT_DIR$/Statstics_Parcellationns/Testing_absolute values_RUN.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Statstics_Parcellationns/Testing_with_negative.py" beforeDir="false" afterPath="$PROJECT_DIR$/Statstics_Parcellationns/Testing_with_negative.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/main.py" beforeDir="false" afterPath="$PROJECT_DIR$/main.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/requirements.txt" beforeDir="false" afterPath="$PROJECT_DIR$/requirements.txt" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -288,6 +251,15 @@
       <option name="presentableId" value="Default" />
       <updated>1709054004240</updated>
     </task>
+    <task id="LOCAL-00001" summary="CHaning the Intial matrix for a high energy Spin matrix">
+      <option name="closed" value="true" />
+      <created>1711767509133</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1711767509133</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
@@ -303,6 +275,8 @@
   </component>
   <component name="VcsManagerConfiguration">
     <option name="ADD_EXTERNAL_FILES_SILENTLY" value="true" />
+    <MESSAGE value="CHaning the Intial matrix for a high energy Spin matrix" />
+    <option name="LAST_COMMIT_MESSAGE" value="CHaning the Intial matrix for a high energy Spin matrix" />
   </component>
   <component name="XDebuggerManager">
     <breakpoint-manager>
@@ -914,12 +888,12 @@
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/St_J_subject_Mean_84/Full_Core.py</url>
-          <line>890</line>
+          <line>898</line>
           <option name="timeStamp" value="271" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
           <url>file://$PROJECT_DIR$/St_J_subject_Mean_84/Full_Core.py</url>
-          <line>889</line>
+          <line>897</line>
           <option name="timeStamp" value="272" />
         </line-breakpoint>
         <line-breakpoint enabled="true" suspend="THREAD" type="python-line">

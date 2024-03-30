@@ -80,8 +80,16 @@ def generate_and_save_graphs(global_results, output_folder, mu=None):
         plt.legend()
         plt.savefig(os.path.join(output_folder, '2D_Graph_Temperature_Distance.png'))
         plt.close()
+# def initialize_spin_matrix(N):
+#     return np.random.choice([-1, 1], size=(N))
+
 def initialize_spin_matrix(N):
-    return np.random.choice([-1, 1], size=(N))
+    # Ensure an equal number of -1 and +1 spins for high energy configuration
+    num_positives = N // 2
+    num_negatives = N - num_positives
+    spins = np.array([1] * num_positives + [-1] * num_negatives)
+    np.random.shuffle(spins)
+    return spins
 def normalize_matrix(matrix):
     max_val = np.max(matrix)
     normalized_matrix = matrix / max_val
