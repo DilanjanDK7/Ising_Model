@@ -42,8 +42,8 @@ def process_files(fmri_path, pet_path, jij_path,subject_id,parcellation,base_out
 
     Jij = np.loadtxt(jij_path, delimiter=',')
     # Jij =None
-    # mu=None
-    mu = np.loadtxt(pet_path, delimiter=',')
+    mu=None
+    # mu = np.loadtxt(pet_path, delimiter=',')
     Jij = normalize_matrix(Jij) # Normalizing Jij
 
     if combine_fc:
@@ -404,7 +404,7 @@ def combined_matrix_distance(A, B, alpha=0.5, beta=0.5, F_max=None):
     correlation = np.corrcoef(A_flat_upper, B_flat_upper)[0, 1]
 
     # Combine components into a single metric
-    combined_metric = alpha * frobenius_component +(1- beta * abs(correlation))
+    combined_metric = alpha * frobenius_component +(1- beta * correlation)
     # Identify the distance type based on alpha and beta values
     if alpha == 0 and beta == 1:
         distance_type = 'correlation'

@@ -4,23 +4,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 from scipy import stats
-import seaborn as sns
-from scipy.stats import kruskal, mannwhitneyu
-from statsmodels.stats.multicomp import pairwise_tukeyhsd
 from statsmodels.stats.multitest import multipletests
-
-
 
 def load_subject_files(base_path):
     """
     Load specific .npy files for all subjects and parcellations into Pandas DataFrames.
-
-    Parameters:
-    - base_path: String, the base directory path containing all subject data.
-
-    Returns:
-    A dictionary with keys as file types and values as a list of tuples. Each tuple contains subject ID,
-    parcellation, and the loaded data as a DataFrame.
     """
     data_types = ['time_series_empirical.npy', 'time_series_optimized.npy',
                   'Simulated_fc_matrix_optimized.npy', 'Empirical_fc_matrix_optimized.npy', 'Jij_optimized.npy']
@@ -31,10 +19,8 @@ def load_subject_files(base_path):
             if file in data_types:
                 file_path = os.path.join(root, file)
                 path_parts = root.split(os.sep)
-                subject_id_index = -2  # Adjust based on your file structure
-                parcellation_index = -1  # Adjust based on your file structure
-                subject_id = path_parts[subject_id_index]
-                parcellation = path_parts[parcellation_index]
+                subject_id = path_parts[-2]  # Assuming this is the structure
+                parcellation = path_parts[-1]  # Assuming this is the structure
                 data = np.load(file_path)
                 df = pd.DataFrame(data)
                 loaded_data[file].append((subject_id, parcellation, df))
@@ -43,14 +29,7 @@ def load_subject_files(base_path):
 
 def compute_fc_correlations(loaded_data):
     """
-    Compute Pearson correlation coefficients for the upper triangle (excluding the diagonal)
-    between empirical and simulated, empirical and Jij, simulated and Jij FC matrices.
-
-    Parameters:
-    - loaded_data: The loaded data dictionary from `load_subject_files`.
-
-    Returns:
-    A DataFrame containing the subject ID, parcellation, and the correlation coefficient for each combination.
+    Compute correlations for the upper triangle (excluding the diagonal) between FC matrices.
     """
     correlations = []
     comparison_pairs = [
@@ -71,72 +50,72 @@ def compute_fc_correlations(loaded_data):
 
     return pd.DataFrame(correlations, columns=['Subject ID', 'Parcellation', 'Data Type 1', 'Data Type 2', 'Correlation'])
 
+
+
+
 def perform_group_analysis(correlation_df, output_folder):
     """
-    Perform group analysis on the correlation coefficients for each pair of conditions
-    (Empirical vs. Simulated, Empirical vs. Jij, Simulated vs. Jij), computing descriptive statistics,
-    visualizations, and logging data modifications.
-
-    Parameters:
-    - correlation_df: DataFrame containing the correlation coefficients.
-    - output_folder: The directory path to save plots, summary data, and logs.
+    Perform group analysis including descriptive statistics, ANOVA, pairwise t-tests with corrections,
+    and visualizations, focusing on mean correlations and distributions by parcellation and comparison type.
+    Separate violin plots are generated for each comparison type.
     """
-
-    # Ensure the output folder exists
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-    # Log file setup
-    log_file_path = os.path.join(output_folder, 'analysis_log.txt')
-    with open(log_file_path, 'w') as log_file:
-        log_file.write("Analysis Log\n")
-        log_file.write("=========================\n")
+    comparison_types = correlation_df[['Data Type 1', 'Data Type 2']].drop_duplicates().values.tolist()
 
-        # Handle NaN values and constant columns before analysis
-        correlation_df_clean = correlation_df.dropna(subset=['Correlation'])  # Ensure to drop NaNs only in 'Correlation'
+    for comparison_type in comparison_types:
+        comp_df = correlation_df[(correlation_df['Data Type 1'] == comparison_type[0]) & (correlation_df['Data Type 2'] == comparison_type[1])]
 
-        # Identify and exclude non-numeric columns for variance filtering
-        numeric_cols = correlation_df_clean.select_dtypes(include=[np.number]).columns.tolist()
-        # Now apply variance threshold only to numeric columns
-        variance_threshold = 0.0
-        non_constant_numeric_cols = correlation_df_clean[numeric_cols].var() > variance_threshold
-        # Ensure to keep the non-numeric columns ('Subject ID', 'Parcellation') in your DataFrame
-        cols_to_keep = ['Subject ID', 'Parcellation','Data Type 1', 'Data Type 2'] + non_constant_numeric_cols[non_constant_numeric_cols].index.tolist()
-        correlation_df_clean = correlation_df_clean[cols_to_keep]
+        # Descriptive Statistics
+        descriptive_stats = comp_df.groupby('Parcellation')['Correlation'].describe()
+        descriptive_stats.to_csv(os.path.join(output_folder, f'descriptive_statistics_{comparison_type[0]}_vs_{comparison_type[1]}.csv'))
 
-        # Descriptive statistics and visualizations for each comparison
-        for types in correlation_df_clean[['Data Type 1', 'Data Type 2']].drop_duplicates().values:
-            data_type_1, data_type_2 = types
-            subset = correlation_df_clean[(correlation_df_clean['Data Type 1'] == data_type_1) & (correlation_df_clean['Data Type 2'] == data_type_2)]
-            descriptive_stats = subset['Correlation'].describe()
+        # ANOVA
+        groups = comp_df.groupby('Parcellation')['Correlation'].apply(list).values
+        f_value, p_value = stats.f_oneway(*groups)
+        print(f"\nANOVA test for {comparison_type[0]} vs {comparison_type[1]}: F = {f_value}, p = {p_value}")
 
-            # Log descriptive statistics
-            log_file.write(f"\nDescriptive statistics for {data_type_1} vs. {data_type_2}:\n")
-            log_file.write(descriptive_stats.to_string())
-            log_file.write("\n\n")
+        # Pairwise t-tests with correction for multiple comparisons (Welch's t-test)
+        perform_pairwise_tests(comp_df, comparison_type, output_folder)
 
-            # Visualization: Histogram of correlation coefficients
-            plt.figure(figsize=(12, 8))
-            sns.histplot(subset['Correlation'], kde=True, stat="density", linewidth=0)
-            plt.title(f'Correlation Coefficients Distribution: {data_type_1} vs. {data_type_2}')
-            plt.xlabel('Correlation Coefficient')
-            plt.ylabel('Density')
-            plt.savefig(os.path.join(output_folder, f'hist_{data_type_1}_vs_{data_type_2}.png'))
-            plt.close()
+        # Violin plot for each comparison type
+        plt.figure(figsize=(12, 8))
+        sns.violinplot(x='Parcellation', y='Correlation', data=comp_df, inner="quartile")
+        plt.title(f'Distribution of Correlations: {comparison_type[0]} vs {comparison_type[1]}')
+        plt.xlabel('Parcellation')
+        plt.ylabel('Correlation')
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_folder, f'correlation_distributions_{comparison_type[0]}_vs_{comparison_type[1]}.png'))
+        plt.close()
 
-    print(f"Analysis completed. Results and plots saved in {output_folder}")
+    print("Enhanced analysis completed. Results and plots saved in", output_folder)
 
-# Ensure base_path is defined and points to your data directory before calling load_subject_files.
-# loaded_data = load_subject_files(base_path)
+def perform_pairwise_tests(df, comparison_type, output_folder):
+    """
+    Conduct pairwise t-tests with corrections for multiple comparisons across parcellations.
+    """
+    parcellations = df['Parcellation'].unique()
+    pairwise_tests = []
+    if len(parcellations) > 1:
+        for i in range(len(parcellations)):
+            for j in range(i + 1, len(parcellations)):
+                data_i = df[df['Parcellation'] == parcellations[i]]['Correlation']
+                data_j = df[df['Parcellation'] == parcellations[j]]['Correlation']
+                t_stat, p_val = stats.ttest_ind(data_i, data_j, equal_var=False)
+                pairwise_tests.append((parcellations[i], parcellations[j], t_stat, p_val))
 
-# Once loaded_data is obtained, calculate correlations.
-# correlation_df = compute_fc_correlations(loaded_data)
+    # Correcting for multiple comparisons
+    p_vals = [x[3] for x in pairwise_tests]
+    reject, pvals_corrected, _, _ = multipletests(p_vals, alpha=0.05, method='fdr_bh')
+    for i, (pair, corrected_pval, is_rejected) in enumerate(zip(pairwise_tests, pvals_corrected, reject)):
+        parcellation_i, parcellation_j, t_stat, p_val = pair
+        print(f"{comparison_type[0]} vs {comparison_type[1]}, {parcellation_i} vs {parcellation_j}: corrected p = {corrected_pval}, reject null: {is_rejected}")
 
-# Ensure output_folder is defined and points to your desired output directory before calling perform_group_analysis.
-# perform_group_analysis(correlation_df, output_folder)
 
-loaded_data = load_subject_files('/home/brainlab-qm/Desktop/Ising_test_10_03/Output/Run_1')
+loaded_data = load_subject_files('/home/brainlab-qm/Desktop/Ising_test_10_03/Output/Run_2')
 coorelation_df = compute_fc_correlations(loaded_data)
-perform_group_analysis(coorelation_df, '/home/brainlab-qm/Desktop/Ising_test_10_03/Group_Analysis/Run_1_Test2')
+perform_group_analysis(coorelation_df, '/home/brainlab-qm/Desktop/Ising_test_10_03/Group_Analysis/Run_2_Test1')
 
 print(" ")

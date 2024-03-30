@@ -2,8 +2,8 @@ from Full_Core import *
 import warnings
 warnings.filterwarnings("ignore")
 
-base_folder = "/home/brainlab-qm/Desktop/Ising_test_10_03/Mean"
-base_output_root = "/home/brainlab-qm/Desktop/Ising_test_10_03/Output/Mean_Analysis_With_mu_norm"
+base_folder = "/home/brainlab-qm/Desktop/New_test/To_Analyze_84"
+base_output_root = "/home/brainlab-qm/Desktop/Ising_test_10_03/Output/Test_84"
 
 num_runs = 5  # Specify the number of runs you want to execute
 

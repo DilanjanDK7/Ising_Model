@@ -11,13 +11,18 @@ from scipy.stats import pearsonr
 import scipy
 import seaborn as sns
 from nilearn.connectome import ConnectivityMeasure
-import os
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import pandas as pd
+import plotly.express as px
+
 
 def process_files(fmri_path, pet_path, jij_path,subject_id,parcellation,base_output_folder):
     """
     Placeholder function to process or perform calculations on the fmri, pet, and jij files.
 
     Parameters:
+
     - fmri_path: Path to the fmri file.
     - pet_path: Path to the pet file.
     - jij_path: Path to the jij file.
@@ -31,7 +36,7 @@ def process_files(fmri_path, pet_path, jij_path,subject_id,parcellation,base_out
     time_series_path = fmri_path
     N = 5
     steps_eq = N*100
-    steps_mc = 1500
+    steps_mc = 2000
     Jij = np.loadtxt(jij_path, delimiter=',')
     # Jij =None
     # mu=None
@@ -51,6 +56,30 @@ def process_files(fmri_path, pet_path, jij_path,subject_id,parcellation,base_out
 
 # def initialize_spin_matrix(N):
 #     return np.random.choice([-1, 1], size=(N, N))
+
+def generate_and_save_graphs(global_results, output_folder, mu=None):
+    df_results = pd.DataFrame(global_results['data'])
+
+    if mu is not None:
+        # Dynamic 3D Graph for temperature, alpha, and distance using Plotly
+        fig = px.scatter_3d(df_results, x='temperature', y='alpha', z='distance', color='distance',
+                            title='3D Scatter Plot of Temperature, Alpha, and Distance',
+                            labels={'temperature': 'Temperature', 'alpha': 'Alpha', 'distance': 'Distance'})
+        fig.update_layout(margin=dict(l=0, r=0, b=0, t=0))
+        # Save the interactive plot as HTML
+        fig.write_html(os.path.join(output_folder, '3D_Graph_Temperature_Alpha_Distance.html'))
+    else:
+        # 2D Graph for temperature and distance using matplotlib (remains unchanged)
+        import matplotlib.pyplot as plt
+        plt.figure(figsize=(10, 7))
+        for distance_type, group in df_results.groupby('distance_type'):
+            plt.scatter(group['temperature'], group['distance'], label=f'Distance Type: {distance_type}')
+        plt.xlabel('Temperature')
+        plt.ylabel('Distance')
+        plt.title('2D Scatter Plot of Temperature and Distance')
+        plt.legend()
+        plt.savefig(os.path.join(output_folder, '2D_Graph_Temperature_Distance.png'))
+        plt.close()
 def initialize_spin_matrix(N):
     return np.random.choice([-1, 1], size=(N))
 def normalize_matrix(matrix):
@@ -361,9 +390,17 @@ def combined_matrix_distance(A, B, alpha=0.5, beta=0.5, F_max=None):
     correlation = np.corrcoef(A_flat_upper, B_flat_upper)[0, 1]
 
     # Combine components into a single metric
-    combined_metric = alpha * frobenius_component +(1- beta * abs(correlation))
+    combined_metric = alpha * frobenius_component +(1- beta * correlation)
+    # Identify the distance type based on alpha and beta values
+    if alpha == 0 and beta == 1:
+        distance_type = 'correlation'
+    elif alpha == 1 and beta == 0:
+        distance_type = 'frobenius_norm'
+    else:
+        distance_type = 'combined'
 
-    return combined_metric
+    # Return both the combined metric and the distance type
+    return combined_metric, distance_type
 def remove_diagonal(matrix):
     """Remove the diagonal elements of a matrix by setting them to zero."""
     np.fill_diagonal(matrix, 0)
@@ -378,7 +415,6 @@ def discrepancy_function(params, empirical_fc, N, steps_eq, steps_mc, Jij=None, 
         return distance
     beta = 1.0 / temperature
     # Simulate time series with given parameters
-    print("Temperature : ", temperature, " , alpha :", alpha)
     mag_mean, energy_mean, susceptibility, specific_heat,simulated_time_series = simulation_task((N, beta, steps_eq, steps_mc, Jij, mu, alpha, True))
     global_results['temperature'].append(temperature)
     global_results['magnetization'].append(mag_mean)
@@ -395,7 +431,13 @@ def discrepancy_function(params, empirical_fc, N, steps_eq, steps_mc, Jij=None, 
     # Calculate distance between the empirical and simulated FC with diagonals removed
     #alpha = 0.5 distance Bias
     #beta = 0.5 coorelation Bias
-    distance = combined_matrix_distance(empirical_fc_no_diag, simulated_fc_no_diag, alpha=0, beta=1)
+    # Use the modified combined_matrix_distance to get both distance and type
+    distance, distance_type = combined_matrix_distance(empirical_fc_no_diag, simulated_fc_no_diag, alpha=0, beta=1, F_max=None)
+    # print("Temperature : ", temperature, " , alpha :", alpha, " , Distance : ", distance)
+    # Append data to global_results including the distance type
+    global_results['data'].append(
+        {'temperature': temperature, 'alpha': alpha, 'distance': distance, 'distance_type': distance_type})
+    print(f"Temperature: {temperature}, Alpha: {alpha}, Distance: {distance}, Distance Type: {distance_type}")
 
     return distance
 def load_matrix(filepath, dtype=np.float64):
@@ -420,7 +462,7 @@ def extract_rho(path):
 
     return correlation_matrix
 
-def optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij=None, bounds=((0.01, 10), (-3, 3)), mu=None,
+def optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij=None, bounds=((0.01, 1.5), (-3, 3)), mu=None,
                         output_folder=None):
     # Extract and save empirical FC
     empirical_fc = np.loadtxt(time_series_path, delimiter=',')
@@ -429,28 +471,38 @@ def optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij=None, bound
     # Plot empirical FC matrix
     plt.figure(figsize=(10, 10))
     empirical_fc_no_diag = remove_diagonal(np.copy(empirical_fc))
-    sns.heatmap(empirical_fc_no_diag, annot=False, cmap='coolwarm')
+    sns.heatmap(empirical_fc_no_diag, annot=True, cmap='coolwarm')
     plt.title("Empirical Functional Connectivity Matrix")
     plt.savefig(os.path.join(output_folder, 'Empirical_fc_plot_optimized.png'))
     plt.close()
 
     # Initialize global results storage
-    global_results = {'temperature': [], 'magnetization': [], 'susceptibility': []}
+    global_results = {'temperature': [], 'magnetization': [], 'susceptibility': [], 'data': []}
+
 
     # Optimize temperature and alpha using dual annealing
     result = dual_annealing(
         discrepancy_function,
         bounds,
         args=(empirical_fc_no_diag, N, steps_eq, steps_mc, Jij, mu, global_results),
-        maxiter=1000,  # Increase the maximum number of iterations
-        maxfun=1000,  # Increase the maximum number of function evaluations
+        maxiter=5000,  # Increase the maximum number of iterations
+        maxfun=5000,  # Increase the maximum number of function evaluations
         initial_temp=3,  # Adjust the initial temperature if needed
         restart_temp_ratio=2e-3,  # Adjust the restart temperature ratio
         visit=5,  # Increase the visit parameter
         accept=-5.0  # Adjust the acceptance parameter
     )
 
+    # After optimization, convert global_results['data'] to DataFrame and save
+    df_results = pd.DataFrame(global_results['data'])
+    # Save to CSV
+    csv_file_path = os.path.join(output_folder, 'optimization_results.csv')
+    df_results.to_csv(csv_file_path, index=False)
+    # Save to Pickle
+    pickle_file_path = os.path.join(output_folder, 'optimization_results.pkl')
+    df_results.to_pickle(pickle_file_path)
     # Calculate Tc from the peak in susceptibility
+    generate_and_save_graphs(global_results, output_folder, mu=mu)
     susceptibilities = np.array(global_results['susceptibility'])
     temperatures = np.array(global_results['temperature'])
     min_height = susceptibilities.mean()  # This is arbitrary, adjust based on your data
@@ -472,39 +524,39 @@ def optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij=None, bound
     print("Optimization results:", result.x)
     # Return optimized parameters and estimated Tc
     return result.x
-def calculate_matrix_correlations(empirical_fc, simulated_fc, jij):
-    """
-    Calculates and returns the correlations between empirical FC and simulated FC,
-    empirical FC and Jij, and simulated FC and Jij.
-
-    Parameters:
-    - empirical_fc: numpy array representing the empirical functional connectivity matrix.
-    - simulated_fc: numpy array representing the simulated functional connectivity matrix.
-    - jij: numpy array representing the Jij structural connectivity matrix.
-
-    Returns:
-    - A dictionary containing the correlation coefficients between:
-      empirical and simulated FC, empirical FC and Jij, and simulated FC and Jij.
-    """
-
-    # Flatten the matrices to simplify correlation calculations
-    empirical_fc_flat = empirical_fc.flatten()
-    simulated_fc_flat = simulated_fc.flatten()
-    jij_flat = jij.flatten()
-
-    # Calculate the correlations
-    corr_empirical_simulated = np.corrcoef(empirical_fc_flat, simulated_fc_flat)[0, 1]
-    corr_empirical_jij = np.corrcoef(empirical_fc_flat, jij_flat)[0, 1]
-    corr_simulated_jij = np.corrcoef(simulated_fc_flat, jij_flat)[0, 1]
-
-    # Return the results in a dictionary
-    correlations = {
-        'empirical_simulated': corr_empirical_simulated,
-        'empirical_jij': corr_empirical_jij,
-        'simulated_jij': corr_simulated_jij
-    }
-
-    return correlations
+# def calculate_matrix_correlations(empirical_fc, simulated_fc, jij):
+#     """
+#     Calculates and returns the correlations between empirical FC and simulated FC,
+#     empirical FC and Jij, and simulated FC and Jij.
+#
+#     Parameters:
+#     - empirical_fc: numpy array representing the empirical functional connectivity matrix.
+#     - simulated_fc: numpy array representing the simulated functional connectivity matrix.
+#     - jij: numpy array representing the Jij structural connectivity matrix.
+#
+#     Returns:
+#     - A dictionary containing the correlation coefficients between:
+#       empirical and simulated FC, empirical FC and Jij, and simulated FC and Jij.
+#     """
+#
+#     # Flatten the matrices to simplify correlation calculations
+#     empirical_fc_flat = empirical_fc.flatten()
+#     simulated_fc_flat = simulated_fc.flatten()
+#     jij_flat = jij.flatten()
+#
+#     # Calculate the correlations
+#     corr_empirical_simulated = np.corrcoef(empirical_fc_flat, simulated_fc_flat)[0, 1]
+#     corr_empirical_jij = np.corrcoef(empirical_fc_flat, jij_flat)[0, 1]
+#     corr_simulated_jij = np.corrcoef(simulated_fc_flat, jij_flat)[0, 1]
+#
+#     # Return the results in a dictionary
+#     correlations = {
+#         'empirical_simulated': corr_empirical_simulated,
+#         'empirical_jij': corr_empirical_jij,
+#         'simulated_jij': corr_simulated_jij
+#     }
+#
+#     return correlations
 def calculate_matrix_correlations_and_norms(empirical_fc, simulated_fc, jij):
     """
     Calculates and returns the correlations and Frobenius norms between empirical FC and simulated FC,
@@ -534,6 +586,68 @@ def calculate_matrix_correlations_and_norms(empirical_fc, simulated_fc, jij):
     fro_norm_empirical_simulated = np.linalg.norm(empirical_fc - simulated_fc, 'fro')
     fro_norm_empirical_jij = np.linalg.norm(empirical_fc - jij, 'fro')
     fro_norm_simulated_jij = np.linalg.norm(simulated_fc - jij, 'fro')
+
+    # Return the results in a dictionary
+    results = {
+        'correlations': {
+            'empirical_simulated': corr_empirical_simulated,
+            'empirical_jij': corr_empirical_jij,
+            'simulated_jij': corr_simulated_jij
+        },
+        'frobenius_norms': {
+            'empirical_simulated': fro_norm_empirical_simulated,
+            'empirical_jij': fro_norm_empirical_jij,
+            'simulated_jij': fro_norm_simulated_jij
+        }
+    }
+
+    return results
+
+def calculate_matrix_correlations_and_norms_upper(empirical_fc, simulated_fc, jij):
+    """
+    Calculates and returns the correlations and Frobenius norms between the upper triangular parts
+    (excluding the diagonal) of empirical FC and simulated FC, empirical FC and Jij,
+    and simulated FC and Jij.
+
+    Parameters:
+    - empirical_fc: numpy array representing the empirical functional connectivity matrix.
+    - simulated_fc: numpy array representing the simulated functional connectivity matrix.
+    - jij: numpy array representing the Jij structural connectivity matrix.
+
+    Returns:
+    - A dictionary containing the correlation coefficients and Frobenius norms between:
+      the upper triangular parts (excluding the diagonal) of empirical and simulated FC,
+      empirical FC and Jij, and simulated FC and Jij.
+    """
+
+    # Indices of the upper triangle, excluding the diagonal
+    upper_tri_indices = np.triu_indices_from(empirical_fc, k=1)
+
+    # Select upper triangular parts, excluding the diagonal
+    empirical_fc_upper = empirical_fc[upper_tri_indices]
+    simulated_fc_upper = simulated_fc[upper_tri_indices]
+    jij_upper = jij[upper_tri_indices]
+
+    # Calculate the correlations
+    corr_empirical_simulated = np.corrcoef(empirical_fc_upper, simulated_fc_upper)[0, 1]
+    corr_empirical_jij = np.corrcoef(empirical_fc_upper, jij_upper)[0, 1]
+    corr_simulated_jij = np.corrcoef(simulated_fc_upper, jij_upper)[0, 1]
+
+    # Calculate Frobenius norms for the differences in upper triangular parts
+    # First, create matrices of differences for the upper triangles
+    diff_empirical_simulated_upper = np.zeros_like(empirical_fc)
+    diff_empirical_jij_upper = np.zeros_like(empirical_fc)
+    diff_simulated_jij_upper = np.zeros_like(empirical_fc)
+
+    # Populate the upper triangles of the difference matrices
+    diff_empirical_simulated_upper[upper_tri_indices] = empirical_fc_upper - simulated_fc_upper
+    diff_empirical_jij_upper[upper_tri_indices] = empirical_fc_upper - jij_upper
+    diff_simulated_jij_upper[upper_tri_indices] = simulated_fc_upper - jij_upper
+
+    # Calculate Frobenius norms for these differences
+    fro_norm_empirical_simulated = np.linalg.norm(diff_empirical_simulated_upper, 'fro')
+    fro_norm_empirical_jij = np.linalg.norm(diff_empirical_jij_upper, 'fro')
+    fro_norm_simulated_jij = np.linalg.norm(diff_simulated_jij_upper, 'fro')
 
     # Return the results in a dictionary
     results = {
@@ -585,7 +699,7 @@ def optimize_and_simulate(time_series_path, N, steps_eq, steps_mc, output_folder
         os.makedirs(output_folder)
 
     # Step 1: Optimization
-    optimized_params = optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij, bounds=((0.0001, 3), (-3, 3)),mu=mu,output_folder=output_folder)
+    optimized_params = optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij, bounds=((0.0001, 1.5), (-3, 3)),mu=mu,output_folder=output_folder)
     temp_optimized, alpha_optimized = optimized_params
 
     # Convert optimized temperature to beta
@@ -640,7 +754,7 @@ def optimize_and_simulate(time_series_path, N, steps_eq, steps_mc, output_folder
         empirical_fc_no_diag = remove_diagonal(np.copy(empirical_fc))
 
         # Calculate correlations and Frobenius norms
-        results = calculate_matrix_correlations_and_norms(empirical_fc_no_diag, simulated_fc_no_diag, Jij)
+        results = calculate_matrix_correlations_and_norms_upper(empirical_fc_no_diag, simulated_fc_no_diag, Jij)
 
         # Print the correlation results and Frobenius norms with evaluations
         print_results_with_evaluation(results)

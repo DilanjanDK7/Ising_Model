@@ -192,8 +192,188 @@ def compute_fc_correlations(loaded_data):
     return correlations_df
 
 
-loaded_data = load_subject_files('/home/brainlab-qm/Desktop/Ising_test_10_03/Output/Run_3_5_1.5k_testing')
-coorelation_df = compute_fc_correlations(loaded_data)
-perform_group_analysis(coorelation_df, '/home/brainlab-qm/Desktop/Ising_test_10_03/Group_Analysis/Run_3_5_1.5k_testing')
+# def compute_fc_correlations_and_save_excel(loaded_data, output_location):
+#     correlations = []
+#     comparison_pairs = [
+#         ('Empirical_fc_matrix_optimized.npy', 'Simulated_fc_matrix_optimized.npy'),
+#         ('Empirical_fc_matrix_optimized.npy', 'Jij_optimized.npy'),
+#         ('Simulated_fc_matrix_optimized.npy', 'Jij_optimized.npy')
+#     ]
+#
+#     # Compute correlations
+#     for pair in comparison_pairs:
+#         for empirical_data, comparison_data in zip(loaded_data[pair[0]], loaded_data[pair[1]]):
+#             subject_id, parcellation, empirical_df = empirical_data
+#             _, _, comparison_df = comparison_data
+#             upper_tri_index = np.triu_indices_from(empirical_df, k=1)
+#             empirical_upper_tri = empirical_df.values[upper_tri_index]
+#             comparison_upper_tri = comparison_df.values[upper_tri_index]
+#
+#             correlation = np.abs(np.corrcoef(empirical_upper_tri, comparison_upper_tri)[0, 1])
+#
+#             pair_label = f"{pair[0]}_vs_{pair[1]}"
+#             correlations.append({
+#                 'Subject ID': subject_id,
+#                 'Parcellation': parcellation,
+#                 'Pair Type': pair_label,
+#                 'Correlation': correlation
+#             })
+#
+#     # Create DataFrame
+#     correlations_df = pd.DataFrame(correlations)
+#
+#     # Pivot table
+#     pivot_df = correlations_df.pivot_table(
+#         index='Subject ID',
+#         columns=['Parcellation', 'Pair Type'],
+#         values='Correlation'
+#     )
+#
+#     # Prepare output file path
+#     excel_output_path = os.path.join(output_location, 'correlations_pivoted.xlsx')
+#
+#     # Save pivoted DataFrame to Excel
+#     with pd.ExcelWriter(excel_output_path, engine='openpyxl') as writer:
+#         pivot_df.to_excel(writer)
+#
+#     return pivot_df
+# def compute_fc_correlations_and_save_excel(loaded_data, output_location):
+#     correlations2 = []
+#     correlations = []
+#     comparison_pairs = [
+#         ('Empirical_fc_matrix_optimized.npy', 'Simulated_fc_matrix_optimized.npy'),
+#         ('Empirical_fc_matrix_optimized.npy', 'Jij_optimized.npy'),
+#         ('Simulated_fc_matrix_optimized.npy', 'Jij_optimized.npy')
+#     ]
+#
+#     # Compute correlations
+#     for pair in comparison_pairs:
+#         for empirical_data, comparison_data in zip(loaded_data[pair[0]], loaded_data[pair[1]]):
+#             subject_id, parcellation, empirical_df = empirical_data
+#             _, _, comparison_df = comparison_data
+#             upper_tri_index = np.triu_indices_from(empirical_df, k=1)
+#             empirical_upper_tri = empirical_df.values[upper_tri_index]
+#             comparison_upper_tri = comparison_df.values[upper_tri_index]
+#
+#             correlation = np.abs(np.corrcoef(empirical_upper_tri, comparison_upper_tri)[0, 1])
+#
+#             pair_label = f"{pair[0]} vs {pair[1]}"
+#             correlations2.append({
+#                 'Subject ID': subject_id,
+#                 'Parcellation': parcellation,
+#                 'Pair Type': pair_label,
+#                 'Correlation': correlation
+#             })
+#
+#             correlations.append({
+#                 'Subject ID': subject_id,
+#                 'Parcellation': parcellation,
+#                 'Data Type 1': pair[0],
+#                 'Data Type 2': pair[1],
+#                 'Correlation': correlation
+#             })
+#
+#     correlations_df = pd.DataFrame(correlations)
+#     correlations_df.sort_values(by=['Subject ID', 'Parcellation', 'Data Type 1', 'Data Type 2'], inplace=True)
+#
+#     # Create DataFrame
+#     correlations_df2 = pd.DataFrame(correlations2)
+#     correlations_df2.sort_values(by=['Subject ID', 'Parcellation', 'Pair Type'], inplace=True)
+#
+#     # Transform DataFrame for Excel
+#     pivot_df = correlations_df2.pivot_table(
+#         index='Subject ID',
+#         columns=['Parcellation', 'Pair Type'],
+#         values='Correlation'
+#     )
+#
+#     # Save to Excel
+#     excel_output_path = os.path.join(output_location, 'correlations_multilevel.xlsx')
+#     with pd.ExcelWriter(excel_output_path, engine='xlsxwriter') as writer:
+#         pivot_df.to_excel(writer)
+#
+#     return correlations_df
+#
 
+def compute_fc_correlations_and_save_excel(loaded_data, output_location):
+    correlations2 = []
+    correlations = []
+    comparison_pairs = [
+        ('Empirical_fc_matrix_optimized.npy', 'Simulated_fc_matrix_optimized.npy'),
+        ('Empirical_fc_matrix_optimized.npy', 'Jij_optimized.npy'),
+        ('Simulated_fc_matrix_optimized.npy', 'Jij_optimized.npy')
+    ]
+    pair_labels_renamed = {
+        'Empirical_fc_matrix_optimized.npy vs Simulated_fc_matrix_optimized.npy': 'empirical - simulated',
+        'Empirical_fc_matrix_optimized.npy vs Jij_optimized.npy': 'empirical - Jij',
+        'Simulated_fc_matrix_optimized.npy vs Jij_optimized.npy': 'simulated - Jij'
+    }
+
+    # Compute correlations
+    for pair in comparison_pairs:
+        for empirical_data, comparison_data in zip(loaded_data[pair[0]], loaded_data[pair[1]]):
+            subject_id, parcellation, empirical_df = empirical_data
+            _, _, comparison_df = comparison_data
+            upper_tri_index = np.triu_indices_from(empirical_df, k=1)
+            empirical_upper_tri = empirical_df.values[upper_tri_index]
+            comparison_upper_tri = comparison_df.values[upper_tri_index]
+
+            correlation = np.abs(np.corrcoef(empirical_upper_tri, comparison_upper_tri)[0, 1])
+            # Round correlation to 2 decimal places
+            correlation = np.round(correlation, 2)
+
+            pair_label = f"{pair[0]} vs {pair[1]}"
+            correlations2.append({
+                'Subject ID': subject_id,
+                'Parcellation': parcellation,
+                'Pair Type': pair_labels_renamed[pair_label],  # Use renamed pair labels
+                'Correlation': correlation
+            })
+
+            correlations.append({
+                'Subject ID': subject_id,
+                'Parcellation': parcellation,
+                'Data Type 1': pair[0],
+                'Data Type 2': pair[1],
+                'Correlation': correlation
+            })
+
+    correlations_df = pd.DataFrame(correlations)
+    correlations_df.sort_values(by=['Subject ID', 'Parcellation', 'Data Type 1', 'Data Type 2'], inplace=True)
+
+    # Create DataFrame
+    correlations_df2 = pd.DataFrame(correlations2)
+    correlations_df2.sort_values(by=['Subject ID', 'Parcellation', 'Pair Type'], inplace=True)
+
+    # Transform DataFrame for Excel
+    pivot_df = correlations_df2.pivot_table(
+        index='Subject ID',
+        columns=['Parcellation', 'Pair Type'],
+        values='Correlation'
+    )
+
+    # Save to Excel
+    excel_output_path = os.path.join(output_location, 'correlations_multilevel.xlsx')
+    with pd.ExcelWriter(excel_output_path, engine='xlsxwriter') as writer:
+        pivot_df.to_excel(writer)
+
+    return correlations_df
+
+
+num_runs = 10  # Specify the number of runs you want to execute
+base_output_root = "/home/brainlab-qm/Desktop/Ising_test_10_03/Output/Mean_Analysis_With_FC_individual_subjects_with_mu"
+Results_output_root= '/home/brainlab-qm/Desktop/Ising_test_10_03/Group_Analysis/Mean_Analysis_With_FC_individual_subjects_with_mu'
+
+
+for run_no in range(1, num_runs + 1):
+
+    base_output_folder = os.path.join(base_output_root, f"Run_test_{run_no}")
+    if not os.path.exists(base_output_folder):
+        os.makedirs(base_output_folder)
+    Results_output_folder = os.path.join(Results_output_root, f"Run_{run_no}")
+    if not os.path.exists(Results_output_folder):
+        os.makedirs(Results_output_folder)
+    loaded_data = load_subject_files(base_output_folder)
+    coorelation_df = compute_fc_correlations_and_save_excel(loaded_data, Results_output_folder)
+    perform_group_analysis(coorelation_df, Results_output_folder)
 print(" ")

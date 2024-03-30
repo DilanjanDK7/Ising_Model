@@ -45,3 +45,13 @@ tornado @ file:///croot/tornado_1696936946304/work
 tzdata @ file:///home/conda/feedstock_root/build_artifacts/python-tzdata_1707747584337/work
 urllib3 @ file:///home/conda/feedstock_root/build_artifacts/urllib3_1678635778344/work
 zipp @ file:///home/conda/feedstock_root/build_artifacts/zipp_1695255097490/work
+
+numpy~=1.26.4
+matplotlib~=3.8.0
+scipy~=1.11.4
+seaborn~=0.13.2
+jinja2~=3.1.3
+nilearn~=0.10.3
+pandas~=2.1.4
+plotly~=5.20.0
+statsmodels~=0.14.1

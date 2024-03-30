@@ -57,6 +57,41 @@ def normalize_matrix(matrix):
     max_val = np.max(matrix)
     normalized_matrix = matrix / max_val
     return normalized_matrix
+def metropolis_step_all_spins_simultaneously(spin_array, beta, Jij=None, mu=None, alpha=1.0, J_default=1.0):
+    if Jij is not None:
+        Jij = normalize_matrix(Jij)
+
+    N = spin_array.shape[0]  # Total number of spins
+    delta_E_array = np.zeros(N)  # Array to store delta_E for each spin
+
+    def delta_E_nearest_neighbors(i):
+        # Function to calculate delta_E for nearest neighbors if Jij is not provided
+        return 2 * J_default * spin_array[i] * (spin_array[(i - 1) % N] + spin_array[(i + 1) % N])
+
+    # Calculate delta_E for each spin based on the initial state
+    for i in range(N):
+        local_T = (mu[i] ** alpha) / beta if mu is not None else 1 / beta
+        local_beta = 1 / local_T
+
+        if Jij is not None:
+            # Calculate the change in energy if spin i were flipped, using Jij for interactions
+            delta_E = 0
+            for j in range(N):  # Loop over all spins to account for interactions
+                if i != j:  # Avoid self-interaction
+                    delta_E += 2 * Jij[i, j] * spin_array[i] * spin_array[j]
+        else:
+            # Calculate the change in energy for nearest neighbors if Jij is not provided
+            delta_E = delta_E_nearest_neighbors(i)
+
+        delta_E_array[i] = delta_E
+
+    # Decide whether to flip each spin based on pre-calculated delta_E
+    for i in range(N):
+        if delta_E_array[i] <= 0 or np.random.rand() < np.exp(-delta_E_array[i] * local_beta):
+            spin_array[i] *= -1
+
+    return spin_array
+
 def metropolis_step_all_spins(spin_array, beta, Jij=None, mu=None, alpha=1.0, J_default=1.0):
     if Jij is not None:
         Jij = normalize_matrix(Jij)
@@ -111,14 +146,13 @@ def calculate_observables(spin_array, beta, Jij=None):
 def simulation_task(params):
     N, beta, steps_eq, steps_mc, Jij, mu, alpha, collect_time_series = params
     spin_matrix = initialize_spin_matrix(N)
-    for _ in range(steps_eq):
-        # metropolis_step(spin_matrix, beta, Jij, mu, alpha)
-        spin_matrix = metropolis_step_all_spins(spin_matrix, beta, Jij, mu, alpha)
 
     mags, energies, time_series = [], [], []
+    for _ in range(steps_eq):
+        spin_matrix = metropolis_step_all_spins_simultaneously(spin_matrix, beta, Jij, mu, alpha)
+
     for _ in range(steps_mc):
-        # metropolis_step(spin_matrix, beta, Jij)
-        spin_matrix = metropolis_step_all_spins(spin_matrix, beta, Jij, mu, alpha)
+        spin_matrix = metropolis_step_all_spins_simultaneously(spin_matrix, beta, Jij, mu, alpha)
         mag, energy = calculate_observables(spin_matrix, beta, Jij)
         mags.append(mag)
         energies.append(energy)
@@ -131,6 +165,7 @@ def simulation_task(params):
     specific_heat = (np.var(energies) * N ** 2) * beta ** 2
 
     return mag_mean, energy_mean, susceptibility, specific_heat, time_series
+
 def run_simulation_parallel(N, temperatures, steps_eq, steps_mc, Jij=None, Tc=None, specific_temp=None):
     beta_values = 1.0 / temperatures
     pool = Pool(processes=4)  # Adjust number of processes based on your system

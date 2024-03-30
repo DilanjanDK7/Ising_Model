@@ -1,4 +1,4 @@
-from St_J_subject_Run.Backups.Core_Ising import *
+from Backups.St_J_subject_Run.Backups.Core_Ising import *
 import os
 import numpy as np
 

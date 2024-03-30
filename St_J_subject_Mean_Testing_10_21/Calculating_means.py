@@ -62,7 +62,8 @@ def calculate_and_save_mean_matrices(base_folder, output_folder):
     # Calculate mean across all subjects for each parcellation and save
     for parcellation, data in parcellations_data.items():
         parcellation_output_folder = os.path.join(output_folder, parcellation)
-        os.makedirs(parcellation_output_folder, exist_ok=True)
+        if not os.path.exists(parcellation_output_folder):
+            os.makedirs(parcellation_output_folder, exist_ok=True)
 
         # Jij
         if data['Jij']:
@@ -87,6 +88,8 @@ def calculate_and_save_mean_matrices(base_folder, output_folder):
             save_matrix_as_csv(mean_empirical_fc, os.path.join(parcellation_output_folder, 'mean_empirical_fc.csv'))
 
 # Example usage
-base_folder = '/home/brainlab-qm/Desktop/Ising_test_10_03/To_Analyze'
-output_folder = '/home/brainlab-qm/Desktop/Ising_test_10_03/Mean'
+base_folder = '/home/brainlab-qm/Desktop/Ising_test_10_03/Subject_files_parcellation'
+output_folder = '/home/brainlab-qm/Desktop/Ising_test_10_03/Mean/sub-Sub1'
+if not os.path.exists(output_folder):
+    os.makedirs(output_folder)
 calculate_and_save_mean_matrices(base_folder, output_folder)

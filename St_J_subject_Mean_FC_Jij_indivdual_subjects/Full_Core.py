@@ -47,11 +47,12 @@ def process_files(fmri_path, pet_path, jij_path,subject_id,parcellation,base_out
     Jij = normalize_matrix(Jij) # Normalizing Jij
 
     if combine_fc:
-        a=0
-        b=1
-        empirical_fc = np.loadtxt(fmri_path, delimiter=',')
+        a=0.5
+        b=0.5
+        mean_fc_path= "/home/brainlab-qm/Desktop/Ising_test_10_03/Mean/sub-Sub1/"+parcellation+"/mean_empirical_fc.csv"
+        empirical_fc_2= np.loadtxt(mean_fc_path, delimiter=',')
         # Calculate the new Jij as the average of Jij and the empirical FC matrix
-        Jij_new= (a*Jij + b*empirical_fc)
+        Jij_new= (a*Jij + b*empirical_fc_2)
     else:
         Jij_new = Jij
 
@@ -403,7 +404,7 @@ def combined_matrix_distance(A, B, alpha=0.5, beta=0.5, F_max=None):
     correlation = np.corrcoef(A_flat_upper, B_flat_upper)[0, 1]
 
     # Combine components into a single metric
-    combined_metric = alpha * frobenius_component +(1- beta * abs(correlation))
+    combined_metric = alpha * frobenius_component +(1- beta * correlation)
     # Identify the distance type based on alpha and beta values
     if alpha == 0 and beta == 1:
         distance_type = 'correlation'
@@ -445,7 +446,7 @@ def discrepancy_function(params, empirical_fc, N, steps_eq, steps_mc, Jij=None, 
     #alpha = 0.5 distance Bias
     #beta = 0.5 coorelation Bias
     # Use the modified combined_matrix_distance to get both distance and type
-    distance, distance_type = combined_matrix_distance(empirical_fc_no_diag, simulated_fc_no_diag, alpha=0.5, beta=0.5, F_max=None)
+    distance, distance_type = combined_matrix_distance(empirical_fc_no_diag, simulated_fc_no_diag, alpha=0, beta=1, F_max=None)
     # print("Temperature : ", temperature, " , alpha :", alpha, " , Distance : ", distance)
     # Append data to global_results including the distance type
     global_results['data'].append(
@@ -475,10 +476,11 @@ def extract_rho(path):
 
     return correlation_matrix
 
-def optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij=None, bounds=((0.01, 10), (-3, 3)), mu=None,
+def optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij=None, bounds=((0.01, 1.5), (-3, 3)), mu=None,
                         output_folder=None):
     # Extract and save empirical FC
-    empirical_fc = np.loadtxt(time_series_path, delimiter=',')
+    empirical_fc = extract_rho(time_series_path)
+    # empirical_fc = np.loadtxt(time_series_path, delimiter=',')
     np.save(os.path.join(output_folder, 'Empirical_fc_matrix_optimized.npy'), empirical_fc)
 
     # Plot empirical FC matrix
@@ -733,7 +735,7 @@ def optimize_and_simulate(time_series_path, N, steps_eq, steps_mc, output_folder
         os.makedirs(output_folder)
 
     # Step 1: Optimization
-    optimized_params = optimize_parameters(time_series_path, N, steps_eq, steps_mc, jij_new, bounds=((0.0001, 3), (-3, 3)),mu=mu,output_folder=output_folder)
+    optimized_params = optimize_parameters(time_series_path, N, steps_eq, steps_mc, jij_new, bounds=((0.0001, 1.5), (-3, 3)),mu=mu,output_folder=output_folder)
     temp_optimized, alpha_optimized = optimized_params
 
     # Convert optimized temperature to beta
@@ -913,13 +915,13 @@ def read_and_process_files(subject_path, parcellation, base_output_folder):
     try:
         for file_name in os.listdir(parcellation_path):
             file_path = os.path.join(parcellation_path, file_name)
-            if file_name.endswith('mean_empirical_fc.csv'):
+            if file_name.endswith('time_series.csv'):
                 fmri_path = file_path
             elif file_name.endswith('features.txt'):
                 pet_path = file_path
             elif file_name.endswith('mean_pet.csv'):
                 pet_path = file_path
-            elif file_name.endswith('mean_jij.csv'):
+            elif file_name.endswith('Jij.csv'):
                 jij_path = file_path
 
         if fmri_path and pet_path and jij_path:

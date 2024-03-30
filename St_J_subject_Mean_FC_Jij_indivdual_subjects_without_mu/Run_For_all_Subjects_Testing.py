@@ -3,7 +3,7 @@ import warnings
 warnings.filterwarnings("ignore")
 
 base_folder = "/home/brainlab-qm/Desktop/5_node_Ising/To_Analyze"
-base_output_root = "/home/brainlab-qm/Desktop/Ising_test_10_03/Output/Mean_Analysis_With_FC_individual_subjects_with_mu/"
+base_output_root = "/home/brainlab-qm/Desktop/Ising_test_10_03/Output/Mean_Analysis_With_FC_individual_subjects_without_mu/"
 
 num_runs = 3  # Specify the number of runs you want to execute
 

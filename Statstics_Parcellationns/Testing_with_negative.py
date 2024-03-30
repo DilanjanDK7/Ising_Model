@@ -110,74 +110,38 @@ def perform_pairwise_tests(df, comparison_type, output_folder):
         f.write(results_str)
 
 #
-# def compute_fc_correlations(loaded_data):
-#     """
-#     Compute correlations for the upper triangle (excluding the diagonal) between FC matrices and return a dataframe.
-#     """
-#     # Initialize list to store correlation results
-#     correlations = []
-#
-#     # Define comparison pairs for clarity
-#     comparison_pairs = [
-#         ('Empirical_fc_matrix_optimized.npy', 'Simulated_fc_matrix_optimized.npy'),
-#         ('Empirical_fc_matrix_optimized.npy', 'Jij_optimized.npy'),
-#         ('Simulated_fc_matrix_optimized.npy', 'Jij_optimized.npy')
-#     ]
-#
-#     # Loop through each pair for comparison
-#     for pair in comparison_pairs:
-#         for empirical_data, comparison_data in zip(loaded_data[pair[0]], loaded_data[pair[1]]):
-#             # Unpack the empirical and comparison data
-#             subject_id, parcellation, empirical_df = empirical_data
-#             _, _, comparison_df = comparison_data
-#
-#             # Calculate the indices for the upper triangle excluding the diagonal
-#             upper_tri_index = np.triu_indices_from(empirical_df, k=1)
-#
-#             # Extract the upper triangle values from each matrix
-#             empirical_upper_tri = empirical_df.values[upper_tri_index]
-#             comparison_upper_tri = comparison_df.values[upper_tri_index]
-#
-#             # Compute the Pearson correlation coefficient between the upper triangle values
-#             correlation = np.corrcoef(empirical_upper_tri, comparison_upper_tri)[0, 1]
-#
-#             # Store the results
-#             correlations.append({
-#                 'Subject ID': subject_id,
-#                 'Parcellation': parcellation,
-#                 'Data Type 1': pair[0],
-#                 'Data Type 2': pair[1],
-#                 'Correlation': correlation
-#             })
-#
-#     # Convert the list of correlation results into a DataFrame for easy access
-#     correlations_df = pd.DataFrame(correlations)
-#
-#     # Optionally, you can sort the dataframe for better readability or analysis
-#     correlations_df.sort_values(by=['Subject ID', 'Parcellation', 'Data Type 1', 'Data Type 2'], inplace=True)
-#
-#     return correlations_df
-
-
 def compute_fc_correlations(loaded_data):
+    """
+    Compute correlations for the upper triangle (excluding the diagonal) between FC matrices and return a dataframe.
+    """
+    # Initialize list to store correlation results
     correlations = []
+
+    # Define comparison pairs for clarity
     comparison_pairs = [
         ('Empirical_fc_matrix_optimized.npy', 'Simulated_fc_matrix_optimized.npy'),
         ('Empirical_fc_matrix_optimized.npy', 'Jij_optimized.npy'),
         ('Simulated_fc_matrix_optimized.npy', 'Jij_optimized.npy')
     ]
 
+    # Loop through each pair for comparison
     for pair in comparison_pairs:
         for empirical_data, comparison_data in zip(loaded_data[pair[0]], loaded_data[pair[1]]):
+            # Unpack the empirical and comparison data
             subject_id, parcellation, empirical_df = empirical_data
             _, _, comparison_df = comparison_data
+
+            # Calculate the indices for the upper triangle excluding the diagonal
             upper_tri_index = np.triu_indices_from(empirical_df, k=1)
+
+            # Extract the upper triangle values from each matrix
             empirical_upper_tri = empirical_df.values[upper_tri_index]
             comparison_upper_tri = comparison_df.values[upper_tri_index]
 
-            # Now calculating correlation and taking its absolute value
-            correlation = np.abs(np.corrcoef(empirical_upper_tri, comparison_upper_tri)[0, 1])
+            # Compute the Pearson correlation coefficient between the upper triangle values
+            correlation = np.corrcoef(empirical_upper_tri, comparison_upper_tri)[0, 1]
 
+            # Store the results
             correlations.append({
                 'Subject ID': subject_id,
                 'Parcellation': parcellation,
@@ -186,10 +150,46 @@ def compute_fc_correlations(loaded_data):
                 'Correlation': correlation
             })
 
+    # Convert the list of correlation results into a DataFrame for easy access
     correlations_df = pd.DataFrame(correlations)
+
+    # Optionally, you can sort the dataframe for better readability or analysis
     correlations_df.sort_values(by=['Subject ID', 'Parcellation', 'Data Type 1', 'Data Type 2'], inplace=True)
 
     return correlations_df
+
+
+# def compute_fc_correlations(loaded_data):
+#     correlations = []
+#     comparison_pairs = [
+#         ('Empirical_fc_matrix_optimized.npy', 'Simulated_fc_matrix_optimized.npy'),
+#         ('Empirical_fc_matrix_optimized.npy', 'Jij_optimized.npy'),
+#         ('Simulated_fc_matrix_optimized.npy', 'Jij_optimized.npy')
+#     ]
+#
+#     for pair in comparison_pairs:
+#         for empirical_data, comparison_data in zip(loaded_data[pair[0]], loaded_data[pair[1]]):
+#             subject_id, parcellation, empirical_df = empirical_data
+#             _, _, comparison_df = comparison_data
+#             upper_tri_index = np.triu_indices_from(empirical_df, k=1)
+#             empirical_upper_tri = empirical_df.values[upper_tri_index]
+#             comparison_upper_tri = comparison_df.values[upper_tri_index]
+#
+#             # Now calculating correlation and taking its absolute value
+#             correlation = np.abs(np.corrcoef(empirical_upper_tri, comparison_upper_tri)[0, 1])
+#
+#             correlations.append({
+#                 'Subject ID': subject_id,
+#                 'Parcellation': parcellation,
+#                 'Data Type 1': pair[0],
+#                 'Data Type 2': pair[1],
+#                 'Correlation': correlation
+#             })
+#
+#     correlations_df = pd.DataFrame(correlations)
+#     correlations_df.sort_values(by=['Subject ID', 'Parcellation', 'Data Type 1', 'Data Type 2'], inplace=True)
+#
+#     return correlations_df
 
 
 loaded_data = load_subject_files('/home/brainlab-qm/Desktop/Ising_test_10_03/Output/Run_3_2.5k_2.5k_testing_without_mu')

@@ -138,7 +138,7 @@ def calculate_observables(spin_array, beta, Jij=None):
 
     return mag, energy
 def simulation_task(params):
-    N, beta, steps_eq, steps_mc, Jij, mu, alpha, collect_time_series = params
+    N, beta, steps_eq, steps_mc, Jij, mu, alpha, collect_time_series,global_results_2 = params
     spin_matrix = initialize_spin_matrix(N)
     for _ in range(steps_eq):
         # metropolis_step(spin_matrix, beta, Jij, mu, alpha)
@@ -153,6 +153,8 @@ def simulation_task(params):
         energies.append(energy)
         if collect_time_series:
             time_series.append(spin_matrix.copy())
+        global_results_2['magnetization'].append(mag)
+        global_results_2['energy'].append(energy)
 
     mag_mean = np.mean(mags)
     energy_mean = np.mean(energies)
@@ -405,7 +407,7 @@ def remove_diagonal(matrix):
     """Remove the diagonal elements of a matrix by setting them to zero."""
     np.fill_diagonal(matrix, 0)
     return matrix
-def discrepancy_function(params, empirical_fc, N, steps_eq, steps_mc, Jij=None, mu=None,global_results=None):
+def discrepancy_function(params, empirical_fc, N, steps_eq, steps_mc, Jij=None, mu=None,global_results=None,global_results_2=None):
     """Calculate discrepancy between empirical and simulated FC."""
 
     temperature, alpha = params
@@ -415,10 +417,14 @@ def discrepancy_function(params, empirical_fc, N, steps_eq, steps_mc, Jij=None, 
         return distance
     beta = 1.0 / temperature
     # Simulate time series with given parameters
-    mag_mean, energy_mean, susceptibility, specific_heat,simulated_time_series = simulation_task((N, beta, steps_eq, steps_mc, Jij, mu, alpha, True))
+    mag_mean, energy_mean, susceptibility, specific_heat,simulated_time_series = simulation_task((N, beta, steps_eq, steps_mc, Jij, mu, alpha, True,global_results_2))
     global_results['temperature'].append(temperature)
     global_results['magnetization'].append(mag_mean)
     global_results['susceptibility'].append(susceptibility)
+    global_results['specific_heat'].append(specific_heat)
+    global_results['time_series'].append(simulated_time_series)
+    global_results['energy'].append(energy_mean)
+    # Calculate simulated FC matrix
     simulated_fc = calculate_simulated_fc(simulated_time_series)
     # Calculate distance between empirical and simulated FC (e.g., Frobenius norm of the difference)
     # distance = np.nanmean((empirical_fc - simulated_fc) ** 2)
@@ -465,9 +471,18 @@ def extract_rho(path):
 def optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij=None, bounds=((0.01, 1.5), (-3, 3)), mu=None,
                         output_folder=None):
     # Extract and save empirical FC
-    empirical_fc = np.loadtxt(time_series_path, delimiter=',')
-    np.save(os.path.join(output_folder, 'Empirical_fc_matrix_optimized.npy'), empirical_fc)
+    # Load the empirical time series for comparison
+    if time_series_path.endswith('time_series.csv'):
+        time_series_emperical = np.loadtxt(time_series_path, delimiter=',')
+        np.save(os.path.join(output_folder, 'time_series_emperical.npy'), time_series_emperical)
+        # Calculate correlations
+        empirical_fc = extract_rho(time_series_path)
+    elif time_series_path.endswith('mean_empirical_fc.csv'):
+        empirical_fc = np.loadtxt(time_series_path,delimiter=',')
+    else:
+        raise ValueError("Invalid file format for the empirical time series")
 
+    np.save(os.path.join(output_folder, 'Empirical_fc_matrix_optimized.npy'), empirical_fc)
     # Plot empirical FC matrix
     plt.figure(figsize=(10, 10))
     empirical_fc_no_diag = remove_diagonal(np.copy(empirical_fc))
@@ -485,8 +500,8 @@ def optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij=None, bound
         discrepancy_function,
         bounds,
         args=(empirical_fc_no_diag, N, steps_eq, steps_mc, Jij, mu, global_results),
-        maxiter=5000,  # Increase the maximum number of iterations
-        maxfun=5000,  # Increase the maximum number of function evaluations
+        maxiter=500,  # Increase the maximum number of iterations
+        maxfun=500,  # Increase the maximum number of function evaluations
         initial_temp=3,  # Adjust the initial temperature if needed
         restart_temp_ratio=2e-3,  # Adjust the restart temperature ratio
         visit=5,  # Increase the visit parameter
@@ -711,11 +726,21 @@ def optimize_and_simulate(time_series_path, N, steps_eq, steps_mc, output_folder
         (N, beta_optimized, steps_eq, steps_mc, Jij, None, alpha_optimized, True))
     simulation_end_time = time.time()
 
-    time_series_emperical = np.loadtxt(time_series_path,delimiter=',')
+    # Load the empirical time series for comparison
+    if time_series_path.endswith('time_series.csv'):
+        time_series_emperical = np.loadtxt(time_series_path, delimiter=',')
+        np.save(os.path.join(output_folder, 'time_series_emperical.npy'), time_series_emperical)
+        # Calculate correlations
+        empirical_fc = extract_rho(time_series_path)
+        empirical_fc_no_diag = remove_diagonal(np.copy(empirical_fc))
+    elif time_series_path.endswith('mean_empirical_fc.csv'):
+        empirical_fc = np.loadtxt(time_series_path,delimiter=',')
+        empirical_fc_no_diag = remove_diagonal(np.copy(empirical_fc))
+    else:
+        raise ValueError("Invalid file format for the empirical time series")
 
     time_series = np.asarray(time_series_optimized)
     np.save(os.path.join(output_folder, 'Simulated_time_series_optimized.npy'), time_series)
-    np.save(os.path.join(output_folder, 'time_series_emperical.npy'), time_series_emperical)
 
     # Step 3: Calculate Functional Connectivity
     fc_matrix_optimized = calculate_simulated_fc(time_series_optimized)
@@ -749,9 +774,7 @@ def optimize_and_simulate(time_series_path, N, steps_eq, steps_mc, output_folder
         sns.heatmap(Jij, annot=True, fmt=".2f", cmap='coolwarm')
         plt.title("Jij- Structural Connectivity")
         plt.savefig(os.path.join(output_folder, 'Jij.png'))
-        # Calculate correlations
-        empirical_fc = extract_rho(time_series_path)
-        empirical_fc_no_diag = remove_diagonal(np.copy(empirical_fc))
+
 
         # Calculate correlations and Frobenius norms
         results = calculate_matrix_correlations_and_norms_upper(empirical_fc_no_diag, simulated_fc_no_diag, Jij)
@@ -868,12 +891,18 @@ def read_and_process_files(subject_path, parcellation, base_output_folder):
     try:
         for file_name in os.listdir(parcellation_path):
             file_path = os.path.join(parcellation_path, file_name)
-            if file_name.endswith('mean_empirical_fc.csv'):
+            if file_name.endswith('time_series.csv'):
+                fmri_path = file_path
+            elif file_name.endswith('mean_empirical_fc.csv'):
                 fmri_path = file_path
             elif file_name.endswith('features.txt'):
                 pet_path = file_path
             elif file_name.endswith('mean_pet.csv'):
                 pet_path = file_path
+            elif file_name.endswith('features.csv'):
+                pet_path = file_path
+            elif file_name.endswith('Jij.csv'):
+                jij_path = file_path
             elif file_name.endswith('mean_jij.csv'):
                 jij_path = file_path
 

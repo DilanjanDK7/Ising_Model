@@ -30,7 +30,7 @@ def process_files(fmri_path, pet_path, jij_path,subject_id,parcellation,base_out
     print(f"Processing:\nFMRI: {fmri_path}\nPET: {pet_path}\nJIJ: {jij_path}")
     time_series_path = fmri_path
     N = 5
-    steps_eq = 1
+    steps_eq = N*100
     steps_mc = 1500
     Jij = np.loadtxt(jij_path, delimiter=',')
     # Jij =None
@@ -423,7 +423,7 @@ def extract_rho(path):
 def optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij=None, bounds=((0.01, 10), (-3, 3)), mu=None,
                         output_folder=None):
     # Extract and save empirical FC
-    empirical_fc = extract_rho(time_series_path)
+    empirical_fc = np.loadtxt(time_series_path, delimiter=',')
     np.save(os.path.join(output_folder, 'Empirical_fc_matrix_optimized.npy'), empirical_fc)
 
     # Plot empirical FC matrix
@@ -754,13 +754,13 @@ def read_and_process_files(subject_path, parcellation, base_output_folder):
     try:
         for file_name in os.listdir(parcellation_path):
             file_path = os.path.join(parcellation_path, file_name)
-            if file_name.endswith('time_series.csv'):
+            if file_name.endswith('mean_empirical_fc.csv'):
                 fmri_path = file_path
             elif file_name.endswith('features.txt'):
                 pet_path = file_path
-            elif file_name.endswith('features.csv'):
+            elif file_name.endswith('mean_pet.csv'):
                 pet_path = file_path
-            elif file_name.endswith('Jij.csv'):
+            elif file_name.endswith('mean_jij.csv'):
                 jij_path = file_path
 
         if fmri_path and pet_path and jij_path:

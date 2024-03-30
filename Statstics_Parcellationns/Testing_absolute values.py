@@ -192,8 +192,8 @@ def compute_fc_correlations(loaded_data):
     return correlations_df
 
 
-loaded_data = load_subject_files('/home/brainlab-qm/Desktop/Ising_test_10_03/Output/Run_3_2.5k_2.5k_testing_without_mu')
+loaded_data = load_subject_files('/home/brainlab-qm/Desktop/Ising_test_10_03/Output/Run_3_5_1.5k_testing')
 coorelation_df = compute_fc_correlations(loaded_data)
-perform_group_analysis(coorelation_df, '/home/brainlab-qm/Desktop/Ising_test_10_03/Group_Analysis/Run_3_2.5k_2.5k_testing_without_mu')
+perform_group_analysis(coorelation_df, '/home/brainlab-qm/Desktop/Ising_test_10_03/Group_Analysis/Run_3_5_1.5k_testing')
 
 print(" ")

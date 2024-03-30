@@ -35,14 +35,27 @@ def process_files(fmri_path, pet_path, jij_path,subject_id,parcellation,base_out
     print(f"Processing:\nFMRI: {fmri_path}\nPET: {pet_path}\nJIJ: {jij_path}")
     time_series_path = fmri_path
     N = 5
-    steps_eq = N*1000
-    steps_mc = 5000
+    steps_eq = N*250
+    steps_mc = 2000
+    combine_fc = True
+
+
     Jij = np.loadtxt(jij_path, delimiter=',')
     # Jij =None
     # mu=None
     mu = np.loadtxt(pet_path, delimiter=',')
     Jij = normalize_matrix(Jij) # Normalizing Jij
-    optimised =optimize_and_simulate(time_series_path, N, steps_eq, steps_mc, output_path, Jij=Jij, mu=mu)
+
+    if combine_fc:
+        a=0.75
+        b=0.25
+        empirical_fc = np.loadtxt(fmri_path, delimiter=',')
+        # Calculate the new Jij as the average of Jij and the empirical FC matrix
+        Jij_new= (a*Jij + b*empirical_fc)
+    else:
+        Jij_new = Jij
+
+    optimised =optimize_and_simulate(time_series_path, N, steps_eq, steps_mc, output_path, Jij=Jij, mu=mu,jij_new=Jij_new)
     description_array = ['Optimal_Temperature', 'Optimal_Alpha', 'Parcellation', 'Subject','correlations']
     value_array = [optimised[0][0], optimised[0][1], parcellation, subject_id,optimised[1]]
     write_values_to_file(output_path, description_array, value_array)
@@ -390,7 +403,7 @@ def combined_matrix_distance(A, B, alpha=0.5, beta=0.5, F_max=None):
     correlation = np.corrcoef(A_flat_upper, B_flat_upper)[0, 1]
 
     # Combine components into a single metric
-    combined_metric = alpha * frobenius_component +(1- beta * abs(correlation))
+    combined_metric = alpha * frobenius_component +(1- beta * correlation)
     # Identify the distance type based on alpha and beta values
     if alpha == 0 and beta == 1:
         distance_type = 'correlation'
@@ -432,7 +445,7 @@ def discrepancy_function(params, empirical_fc, N, steps_eq, steps_mc, Jij=None, 
     #alpha = 0.5 distance Bias
     #beta = 0.5 coorelation Bias
     # Use the modified combined_matrix_distance to get both distance and type
-    distance, distance_type = combined_matrix_distance(empirical_fc_no_diag, simulated_fc_no_diag, alpha=0, beta=1, F_max=None)
+    distance, distance_type = combined_matrix_distance(empirical_fc_no_diag, simulated_fc_no_diag, alpha=0.5, beta=0.5, F_max=None)
     # print("Temperature : ", temperature, " , alpha :", alpha, " , Distance : ", distance)
     # Append data to global_results including the distance type
     global_results['data'].append(
@@ -462,7 +475,7 @@ def extract_rho(path):
 
     return correlation_matrix
 
-def optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij=None, bounds=((0.01, 10), (-3, 3)), mu=None,
+def optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij=None, bounds=((0.01, 1.5), (-3, 3)), mu=None,
                         output_folder=None):
     # Extract and save empirical FC
     empirical_fc = np.loadtxt(time_series_path, delimiter=',')
@@ -602,7 +615,7 @@ def calculate_matrix_correlations_and_norms(empirical_fc, simulated_fc, jij):
 
     return results
 
-def calculate_matrix_correlations_and_norms_upper(empirical_fc, simulated_fc, jij):
+def calculate_matrix_correlations_and_norms_upper(empirical_fc, simulated_fc, jij,jij_new=None):
     """
     Calculates and returns the correlations and Frobenius norms between the upper triangular parts
     (excluding the diagonal) of empirical FC and simulated FC, empirical FC and Jij,
@@ -626,39 +639,61 @@ def calculate_matrix_correlations_and_norms_upper(empirical_fc, simulated_fc, ji
     empirical_fc_upper = empirical_fc[upper_tri_indices]
     simulated_fc_upper = simulated_fc[upper_tri_indices]
     jij_upper = jij[upper_tri_indices]
+    jij_new_upper = jij_new[upper_tri_indices]
 
     # Calculate the correlations
     corr_empirical_simulated = np.corrcoef(empirical_fc_upper, simulated_fc_upper)[0, 1]
     corr_empirical_jij = np.corrcoef(empirical_fc_upper, jij_upper)[0, 1]
     corr_simulated_jij = np.corrcoef(simulated_fc_upper, jij_upper)[0, 1]
+    corr_empirical_jij_new = np.corrcoef(empirical_fc_upper, jij_new_upper)[0, 1]
+    corr_simulated_jij_new = np.corrcoef(simulated_fc_upper, jij_new_upper)[0, 1]
+    corr_jij_jij_new = np.corrcoef(jij_upper, jij_new_upper)[0, 1]
+
 
     # Calculate Frobenius norms for the differences in upper triangular parts
     # First, create matrices of differences for the upper triangles
     diff_empirical_simulated_upper = np.zeros_like(empirical_fc)
     diff_empirical_jij_upper = np.zeros_like(empirical_fc)
     diff_simulated_jij_upper = np.zeros_like(empirical_fc)
+    diff_empirical_jij_new_upper = np.zeros_like(empirical_fc)
+    diff_simulated_jij_new_upper = np.zeros_like(empirical_fc)
+    diff_jij_jij_new_upper = np.zeros_like(empirical_fc)
 
     # Populate the upper triangles of the difference matrices
     diff_empirical_simulated_upper[upper_tri_indices] = empirical_fc_upper - simulated_fc_upper
     diff_empirical_jij_upper[upper_tri_indices] = empirical_fc_upper - jij_upper
     diff_simulated_jij_upper[upper_tri_indices] = simulated_fc_upper - jij_upper
+    diff_empirical_jij_new_upper[upper_tri_indices] = empirical_fc_upper - jij_new_upper
+    diff_simulated_jij_new_upper[upper_tri_indices] = simulated_fc_upper - jij_new_upper
+    diff_jij_jij_new_upper[upper_tri_indices] = jij_upper - jij_new_upper
+
 
     # Calculate Frobenius norms for these differences
     fro_norm_empirical_simulated = np.linalg.norm(diff_empirical_simulated_upper, 'fro')
     fro_norm_empirical_jij = np.linalg.norm(diff_empirical_jij_upper, 'fro')
     fro_norm_simulated_jij = np.linalg.norm(diff_simulated_jij_upper, 'fro')
+    fro_norm_empirical_jij_new = np.linalg.norm(diff_empirical_jij_new_upper, 'fro')
+    fro_norm_simulated_jij_new = np.linalg.norm(diff_simulated_jij_new_upper, 'fro')
+    fro_norm_jij_jij_new = np.linalg.norm(diff_jij_jij_new_upper, 'fro')
+
 
     # Return the results in a dictionary
     results = {
         'correlations': {
             'empirical_simulated': corr_empirical_simulated,
             'empirical_jij': corr_empirical_jij,
-            'simulated_jij': corr_simulated_jij
+            'simulated_jij': corr_simulated_jij,
+            'empirical_jij_new': corr_empirical_jij_new,
+            'simulated_jij_new': corr_simulated_jij_new,
+            'jij_jij_new': corr_jij_jij_new
         },
         'frobenius_norms': {
             'empirical_simulated': fro_norm_empirical_simulated,
             'empirical_jij': fro_norm_empirical_jij,
-            'simulated_jij': fro_norm_simulated_jij
+            'simulated_jij': fro_norm_simulated_jij,
+            'empirical_jij_new': fro_norm_empirical_jij_new,
+            'simulated_jij_new': fro_norm_simulated_jij_new,
+            'jij_jij_new': fro_norm_jij_jij_new
         }
     }
 
@@ -692,13 +727,13 @@ def remove_diagonal(matrix):
     """Remove the diagonal elements of a matrix by setting them to zero."""
     np.fill_diagonal(matrix, 0)
     return matrix
-def optimize_and_simulate(time_series_path, N, steps_eq, steps_mc, output_folder, Jij=None,mu=None):
+def optimize_and_simulate(time_series_path, N, steps_eq, steps_mc, output_folder, Jij=None,mu=None,jij_new=None):
     # Ensure the output folder exists
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
     # Step 1: Optimization
-    optimized_params = optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij, bounds=((0.0001, 3), (-3, 3)),mu=mu,output_folder=output_folder)
+    optimized_params = optimize_parameters(time_series_path, N, steps_eq, steps_mc, jij_new, bounds=((0.0001, 1.5), (-3, 3)),mu=mu,output_folder=output_folder)
     temp_optimized, alpha_optimized = optimized_params
 
     # Convert optimized temperature to beta
@@ -707,7 +742,7 @@ def optimize_and_simulate(time_series_path, N, steps_eq, steps_mc, output_folder
     # Step 2: Simulation with Optimized Parameters
     simulation_start_time = time.time()
     _, _, _, _, time_series_optimized = simulation_task(
-        (N, beta_optimized, steps_eq, steps_mc, Jij, None, alpha_optimized, True))
+        (N, beta_optimized, steps_eq, steps_mc, jij_new, None, alpha_optimized, True))
     simulation_end_time = time.time()
 
     time_series_emperical = np.loadtxt(time_series_path,delimiter=',')
@@ -752,8 +787,19 @@ def optimize_and_simulate(time_series_path, N, steps_eq, steps_mc, output_folder
         empirical_fc = extract_rho(time_series_path)
         empirical_fc_no_diag = remove_diagonal(np.copy(empirical_fc))
 
+    if jij_new is not None:
+        jij_new = normalize_matrix(jij_new)
+        plt.close()
+        plt.figure(figsize=(10, 10))
+        sns.heatmap(jij_new, annot=True, fmt=".2f", cmap='coolwarm')
+        plt.title("Jij-FC Combined")
+        plt.savefig(os.path.join(output_folder, 'Jij-FC.png'))
+
+
+
+
         # Calculate correlations and Frobenius norms
-        results = calculate_matrix_correlations_and_norms_upper(empirical_fc_no_diag, simulated_fc_no_diag, Jij)
+        results = calculate_matrix_correlations_and_norms_upper(empirical_fc_no_diag, simulated_fc_no_diag, Jij,jij_new)
 
         # Print the correlation results and Frobenius norms with evaluations
         print_results_with_evaluation(results)
