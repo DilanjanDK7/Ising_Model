@@ -15,9 +15,19 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import pandas as pd
 import plotly.express as px
+from numba import njit, prange
 
 
-def process_files(fmri_path, pet_path, jij_path,subject_id,parcellation,base_output_folder):
+############################# Other Functions #############################
+import os
+import logging
+import pandas as pd
+from scipy.stats import pearsonr, f_oneway
+from concurrent.futures import ProcessPoolExecutor # For parallel processing
+import concurrent.futures as cf
+
+
+def process_files(fmri_path, pet_path, jij_path,subject_id,parcellation,base_output_folder,global_results=None):
     """
     Placeholder function to process or perform calculations on the fmri, pet, and jij files.
 
@@ -34,28 +44,33 @@ def process_files(fmri_path, pet_path, jij_path,subject_id,parcellation,base_out
     output_path= create_individual_output_folders(base_output_folder, subject_id, parcellation)
     print(f"Processing:\nFMRI: {fmri_path}\nPET: {pet_path}\nJIJ: {jij_path}")
     time_series_path = fmri_path
-    N = 5
-    steps_eq = N*100
-    steps_mc = 2000
+    N = 84
+    steps_eq = N*5
+    steps_mc = 1500
     Jij = np.loadtxt(jij_path, delimiter=',')
     # Jij =None
     # mu=None
     mu = np.loadtxt(pet_path, delimiter=',')
     Jij = normalize_matrix(Jij) # Normalizing Jij
-    optimised =optimize_and_simulate(time_series_path, N, steps_eq, steps_mc, output_path, Jij=Jij, mu=mu)
+
+    combine_fc = True
+    if combine_fc:
+        a=0.5
+        b=0.5
+        mean_fc_path= "D:\DIlanjan\Ising_data\Mean_84\sub-Sub1\\atlas_NMI_2mm.nii\mean_empirical_fc.csv"
+        empirical_fc_2= np.loadtxt(mean_fc_path, delimiter=',')
+        # Calculate the new Jij as the average of Jij and the empirical FC matrix
+        Jij_new= (a*Jij + b*empirical_fc_2)
+    else:
+        Jij_new = Jij
+
+    optimised =optimize_and_simulate(time_series_path, N, steps_eq, steps_mc, output_path, Jij=Jij_new, mu=mu)
     description_array = ['Optimal_Temperature', 'Optimal_Alpha', 'Parcellation', 'Subject','correlations']
     value_array = [optimised[0][0], optimised[0][1], parcellation, subject_id,optimised[1]]
     write_values_to_file(output_path, description_array, value_array)
 
     print(" Succesfully Completed ")
     return optimised
-
-# # Ensure reproducibility
-# np.random.seed(42)
-
-
-# def initialize_spin_matrix(N):
-#     return np.random.choice([-1, 1], size=(N, N))
 
 def generate_and_save_graphs(global_results, output_folder, mu=None):
     df_results = pd.DataFrame(global_results['data'])
@@ -80,8 +95,6 @@ def generate_and_save_graphs(global_results, output_folder, mu=None):
         plt.legend()
         plt.savefig(os.path.join(output_folder, '2D_Graph_Temperature_Distance.png'))
         plt.close()
-# def initialize_spin_matrix(N):
-#     return np.random.choice([-1, 1], size=(N))
 
 def initialize_spin_matrix(N):
     # Ensure an equal number of -1 and +1 spins for high energy configuration
@@ -94,37 +107,87 @@ def normalize_matrix(matrix):
     max_val = np.max(matrix)
     normalized_matrix = matrix / max_val
     return normalized_matrix
-def metropolis_step_all_spins(spin_array, beta, Jij=None, mu=None, alpha=1.0, J_default=1.0):
+
+
+# def metropolis_step_all_spins(spin_array, beta, Jij=None, mu=None, alpha=1.0, J_default=1.0):
+#     if Jij is not None:
+#         Jij = normalize_matrix(Jij)
+#
+#     N = spin_array.shape[0]  # Total number of spins
+#
+#     # Function to calculate delta_E for nearest neighbors if Jij is not provided
+#     def delta_E_nearest_neighbors(i):
+#         return 2 * J_default * spin_array[i] * (spin_array[(i - 1) % N] + spin_array[(i + 1) % N])
+#
+#     rand_indices = np.random.permutation(N)  # Create a random permutation of indices
+#
+#     for i in rand_indices:  # Iterate over spins in the order of the random permutation
+#         local_T = (mu[i] ** alpha) / beta if mu is not None else 1 / beta
+#         local_beta = 1 / local_T
+#
+#         if Jij is not None:
+#             # Calculate the change in energy if spin i were flipped, using Jij for interactions
+#             delta_E = 0
+#             for j in range(N):  # Loop over all spins to account for interactions
+#                 if i != j:  # Avoid self-interaction
+#                     delta_E += 2 * Jij[i, j] * spin_array[i] * spin_array[j]
+#         else:
+#             # Calculate the change in energy for nearest neighbors if Jij is not provided
+#             delta_E = delta_E_nearest_neighbors(i)
+#
+#         # Decide whether to flip the spin
+#         if delta_E <= 0 or np.random.rand() < np.exp(-delta_E * local_beta):
+#             spin_array[i] *= -1
+#
+#     return spin_array
+def metropolis_step_all_spins(spin_array, beta, Jij=None, mu=None, alpha=1.0, J_default=1.0, order='strength', flip_mode='immediate', seed=42):
+    if seed is not None:
+        np.random.seed(seed)  # Set the seed for reproducibility
+
     if Jij is not None:
         Jij = normalize_matrix(Jij)
 
     N = spin_array.shape[0]  # Total number of spins
 
-    # Function to calculate delta_E for nearest neighbors if Jij is not provided
     def delta_E_nearest_neighbors(i):
         return 2 * J_default * spin_array[i] * (spin_array[(i - 1) % N] + spin_array[(i + 1) % N])
 
-    rand_indices = np.random.permutation(N)  # Create a random permutation of indices
+    def delta_E_arbitrary(i):
+        return 2 * sum(Jij[i, j] * spin_array[i] * spin_array[j] for j in range(N) if i != j)
 
-    for i in rand_indices:  # Iterate over spins in the order of the random permutation
+    if Jij is not None:
+        if order == 'sequential':
+            indices = range(N)
+        elif order == 'strength':
+            interaction_strength = np.sum(np.abs(Jij), axis=1)
+            indices = np.argsort(-interaction_strength)  # Sort by decreasing strength of interactions
+    else:
+        indices = np.random.permutation(N)  # Random permutation if Jij is not provided
+
+    flip_decisions = np.zeros(N, dtype=bool)
+
+    for i in indices:
         local_T = (mu[i] ** alpha) / beta if mu is not None else 1 / beta
         local_beta = 1 / local_T
 
         if Jij is not None:
-            # Calculate the change in energy if spin i were flipped, using Jij for interactions
-            delta_E = 0
-            for j in range(N):  # Loop over all spins to account for interactions
-                if i != j:  # Avoid self-interaction
-                    delta_E += 2 * Jij[i, j] * spin_array[i] * spin_array[j]
+            delta_E = delta_E_arbitrary(i)
         else:
-            # Calculate the change in energy for nearest neighbors if Jij is not provided
             delta_E = delta_E_nearest_neighbors(i)
 
-        # Decide whether to flip the spin
-        if delta_E <= 0 or np.random.rand() < np.exp(-delta_E * local_beta):
-            spin_array[i] *= -1
+        if flip_mode == 'immediate':
+            if delta_E <= 0 or np.random.rand() < np.exp(-delta_E * local_beta):
+                spin_array[i] *= -1
+        elif flip_mode == 'after_check':
+            flip_decisions[i] = delta_E <= 0 or np.random.rand() < np.exp(-delta_E * local_beta)
+
+    if flip_mode == 'after_check':
+        for i in range(N):
+            if flip_decisions[i]:
+                spin_array[i] *= -1
 
     return spin_array
+
 def calculate_observables(spin_array, beta, Jij=None):
     N = spin_array.shape[0]
     # Calculate magnetization for 1D array
@@ -170,33 +233,6 @@ def simulation_task(params):
     specific_heat = (np.var(energies) * N ** 2) * beta ** 2
 
     return mag_mean, energy_mean, susceptibility, specific_heat, time_series
-def run_simulation_parallel(N, temperatures, steps_eq, steps_mc, Jij=None, Tc=None, specific_temp=None):
-    beta_values = 1.0 / temperatures
-    pool = Pool(processes=4)  # Adjust number of processes based on your system
-    tasks = [(N, beta, steps_eq, steps_mc, Jij, mu, alpha, collect_time_series) for beta in beta_values]
-    results = pool.map(simulation_task, tasks)
-    pool.close()
-    pool.join()
-
-    results_dict = {'magnetizations': [], 'susceptibilities': [], 'specific_heats': [], 'energies': [],
-                    'time_series': {}}
-    for i, (mag_mean, energy_mean, susceptibility, specific_heat, time_series) in enumerate(results):
-        results_dict['magnetizations'].append(mag_mean)
-        results_dict['energies'].append(energy_mean)
-        results_dict['susceptibilities'].append(susceptibility)
-        results_dict['specific_heats'].append(specific_heat)
-        if temperatures[i] == Tc or temperatures[i] == specific_temp:
-            results_dict['time_series'][temperatures[i]] = time_series
-
-    # Estimate the critical temperature based on the peak of susceptibility if not provided
-    if Tc is None:
-        susceptibilities = np.array(results_dict['susceptibilities'])
-        peaks, _ = find_peaks(susceptibilities)
-        Tc_estimated = temperatures[peaks[0]] if len(peaks) > 0 else None
-    else:
-        Tc_estimated = Tc
-
-    return results_dict, Tc_estimated
 def calculate_functional_connectivity(time_series):
     # Assuming time_series is a list of N x N matrices
     # Flatten each matrix and calculate the correlation across all time points for each pair of sites
@@ -433,6 +469,8 @@ def discrepancy_function(params, empirical_fc, N, steps_eq, steps_mc, Jij=None, 
     global_results['time_series'].append(simulated_time_series)
     global_results['energy'].append(energy_mean)
     # Calculate simulated FC matrix
+
+
     simulated_fc = calculate_simulated_fc(simulated_time_series)
     # Calculate distance between empirical and simulated FC (e.g., Frobenius norm of the difference)
     # distance = np.nanmean((empirical_fc - simulated_fc) ** 2)
@@ -452,6 +490,9 @@ def discrepancy_function(params, empirical_fc, N, steps_eq, steps_mc, Jij=None, 
     global_results['data'].append(
         {'temperature': temperature, 'alpha': alpha, 'distance': distance, 'distance_type': distance_type})
     print(f"Temperature: {temperature}, Alpha: {alpha}, Distance: {distance}, Distance Type: {distance_type}")
+
+    if np.isnan(distance):
+        distance = 2
 
     return distance
 def load_matrix(filepath, dtype=np.float64):
@@ -477,7 +518,7 @@ def extract_rho(path):
     return correlation_matrix
 
 def optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij=None, bounds=((0.01, 1.5), (-3, 3)), mu=None,
-                        output_folder=None):
+                        output_folder=None,global_results =None):
     # Extract and save empirical FC
     # Load the empirical time series for comparison
     if time_series_path.endswith('time_series.csv'):
@@ -500,14 +541,18 @@ def optimize_parameters(time_series_path, N, steps_eq, steps_mc, Jij=None, bound
     plt.close()
 
     # Initialize global results storage
-    global_results = {'temperature': [], 'magnetization': [], 'susceptibility': [], 'data': []}
+    if global_results is None:
+        global_results = {'temperature': [], 'magnetization': [], 'susceptibility': [], 'specific_heat': [],
+                          'time_series': [], 'energy': [], 'data': []}
+        global_results_2 = {'temperature': [], 'magnetization': [], 'susceptibility': [], 'specific_heat': [],
+                            'time_series': [], 'energy': [], 'data': []}
 
 
     # Optimize temperature and alpha using dual annealing
     result = dual_annealing(
         discrepancy_function,
         bounds,
-        args=(empirical_fc_no_diag, N, steps_eq, steps_mc, Jij, mu, global_results),
+        args=(empirical_fc_no_diag, N, steps_eq, steps_mc, Jij, mu, global_results,global_results_2),
         maxiter=500,  # Increase the maximum number of iterations
         maxfun=500,  # Increase the maximum number of function evaluations
         initial_temp=3,  # Adjust the initial temperature if needed
@@ -804,14 +849,6 @@ def optimize_and_simulate(time_series_path, N, steps_eq, steps_mc, output_folder
     return optimized_params, results,os.path.join(output_folder, 'fc_matrix_optimized.npy'), os.path.join(output_folder,
                                                                                                   'time_series_optimized.npy'), log_path
 
-
-############################# Other Functions #############################
-import os
-import logging
-import pandas as pd
-from scipy.stats import pearsonr, f_oneway
-from concurrent.futures import ProcessPoolExecutor # For parallel processing
-import concurrent.futures as cf
 
 def write_values_to_file(output_folder, description_array, value_array):
     """

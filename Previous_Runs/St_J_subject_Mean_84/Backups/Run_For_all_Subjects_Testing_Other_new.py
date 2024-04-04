@@ -1,4 +1,4 @@
-from St_J_subject_Mean_Testing_10_21.Backups.Full_Core_New import *
+from Previous_Runs.St_J_subject_Mean_Testing_10_21.Backups.Full_Core_New import *
 
 
 base_folder = "/home/brainlab-qm/Desktop/Ising_test_10_03/Mean"

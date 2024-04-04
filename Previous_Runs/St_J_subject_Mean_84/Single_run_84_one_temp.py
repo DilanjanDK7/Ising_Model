@@ -1,6 +1,6 @@
 import numpy as np
 
-from Full_Core import *
+from Full_Core_Seed import *
 import os
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -69,16 +69,19 @@ def run_discrepancy_simulation_fixed_temp(N_runs, temperature, empirical_fc, N, 
     return global_results
 
 # Example usage
-N_runs = 10
-fixed_temperature = 0.1
+N_runs = 100
+fixed_temperature = 5
 N = 84
-steps_eq = 1
-steps_mc = 10000
-empirical_fc = np.random.rand(N, N)
+steps_eq = 10*N
+steps_mc = 2000
+empirical_fc = np.loadtxt('/home/brainlab-qm/Desktop/Ising_test_10_03/To_Analyze_84/sub-Sub7/mean_empirical_fc.csv', delimiter=',')
+# empirical_fc = np.random.rand(N, N)
+# Jij = np.loadtxt('/home/brainlab-qm/Desktop/New_test/To_Analyze_84/sub-Sub7/atlas_NMI_2mm.nii/Jij.csv', delimiter=',')
+Jij = np.loadtxt('/home/brainlab-qm/Desktop/Ising_test_10_03/To_Analyze_84/sub-Sub7/mean_empirical_fc.csv', delimiter=',')
 
-Jij = np.loadtxt('/home/brainlab-qm/Desktop/New_test/To_Analyze_84/sub-Sub7/atlas_NMI_2mm.nii/Jij.csv', delimiter=',')
 mu = None
-output_folder = '/home/brainlab-qm/Desktop/Ising_test_29_03/Output/Testing_Random_Ising'
+# Jij = None
+output_folder = '/media/brainlab-qm/Seagate Portable Drive/Data Dilanjan/Ising_outputs/Testing_Random_Ising_84_seeded'
 if not os.path.exists(output_folder):
     os.makedirs(output_folder)
 global_results = run_discrepancy_simulation_fixed_temp(N_runs, fixed_temperature, empirical_fc, N, steps_eq, steps_mc, Jij, mu, output_folder)
