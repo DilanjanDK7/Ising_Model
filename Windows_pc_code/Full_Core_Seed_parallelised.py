@@ -18,7 +18,7 @@ import plotly.express as px
 from numba import njit, prange
 import plotly.figure_factory as ff
 import plotly.graph_objects as go
-
+import matplotlib.animation as animation
 
 
 ############################# Other Functions #############################
@@ -112,8 +112,60 @@ def normalize_matrix(matrix):
     normalized_matrix = matrix / max_val
     return normalized_matrix
 
+def create_animation(time_series, output_path, interval=50):
+    fig, ax = plt.subplots()
+    im = ax.imshow(time_series[0], cmap='Greys', interpolation='nearest')
+
+    def update(i):
+        im.set_data(time_series[i])
+        return [im]
+
+    ani = animation.FuncAnimation(fig, update, frames=len(time_series), interval=interval, blit=True)
+    ani.save(output_path, writer='ffmpeg')  # Save the animation as a video file
+    plt.close(fig)  # Close the figure to free up memory
+    return ani
 
 
+def animate_connectivity(time_series, window_size, step_size, output_file=None, fill_value=0):
+    # Ensure time_series is a numpy array
+    time_series = np.asarray(time_series)
+
+    # Initialize the connectivity measure
+    connectivity_measure = ConnectivityMeasure(kind='correlation')
+
+    # Prepare the figure for plotting
+    fig, ax = plt.subplots()
+    cax = ax.matshow(np.zeros((time_series.shape[0], time_series.shape[0])), vmin=-1, vmax=1)
+    fig.colorbar(cax)
+
+    # Function to update the figure for each frame
+    def update(frame):
+        start = frame * step_size
+        end = start + window_size
+        if end > time_series.shape[1]:
+            end = time_series.shape[1]
+        data_window = time_series[:, start:end]
+        correlation_matrix = connectivity_measure.fit_transform([data_window])[0]
+
+        cax.set_array(correlation_matrix)
+        ax.set_title(f'Time window: {start} to {end}')
+        return cax,
+
+    # Create the animation
+    num_frames = (time_series.shape[1] - window_size) // step_size + 1
+    ani = animation.FuncAnimation(fig, update, frames=num_frames, interval=50, blit=True)
+
+    # Show the plot
+    plt.show()
+
+    # Save the animation if an output file path is provided
+    if output_file:
+        # Set up the writer for saving the file, using ffmpeg or similar
+        Writer = animation.writers['ffmpeg']
+        writer = Writer(fps=15, metadata=dict(artist='Me'), bitrate=1800)
+        ani.save(output_file, writer=writer)
+
+    return ani
 def create_interactive_heatmap(matrix, title, output_folder, file_name):
     """
     Create and save an interactive heatmap using Plotly that only displays cell values on hover.
@@ -251,6 +303,7 @@ def calculate_observables(spin_array, beta, Jij=None):
         # No need to adjust for double-counting since each pair is considered exactly once
 
     return mag, energy
+
 def simulation_task(params):
     N, beta, steps_eq, steps_mc, Jij, mu, alpha, collect_time_series,global_results_2 = params
     spin_matrix = initialize_spin_matrix(N)
@@ -276,12 +329,14 @@ def simulation_task(params):
     specific_heat = (np.var(energies) * N ** 2) * beta ** 2
 
     return mag_mean, energy_mean, susceptibility, specific_heat, time_series
+
 def calculate_functional_connectivity(time_series):
     # Assuming time_series is a list of N x N matrices
     # Flatten each matrix and calculate the correlation across all time points for each pair of sites
     time_series_flat = [ts.flatten() for ts in time_series]
     correlation_matrix = np.corrcoef(time_series_flat)
     return correlation_matrix
+
 def plot_functional_connectivity(fc_matrix):
     fig, ax = plt.subplots(figsize=(8, 6))
     cax = ax.matshow(fc_matrix, interpolation='nearest')
@@ -416,6 +471,7 @@ def plot_matrix(spin_matrix, title="Spin Matrix"):
     plt.ylabel('Y-axis')
     plt.show()
 # Optimisation
+
 def calculate_correlation(matrix1, matrix2):
     """Calculate Pearson correlation coefficient between two matrices, handling NaNs."""
     # Flatten matrices and remove pairs where either is NaN
@@ -440,6 +496,7 @@ def calculate_simulated_fc(time_series, fill_value=0):
     # plt.title("Functional Connectivity Matrix")
     # plt.show()
     return correlation_matrix
+
 def combined_matrix_distance(A, B, alpha=0.5, beta=0.5, F_max=None):
     """
     Calculates a combined distance metric between two matrices, incorporating
@@ -490,10 +547,12 @@ def combined_matrix_distance(A, B, alpha=0.5, beta=0.5, F_max=None):
 
     # Return both the combined metric and the distance type
     return combined_metric, distance_type
+
 def remove_diagonal(matrix):
     """Remove the diagonal elements of a matrix by setting them to zero."""
     np.fill_diagonal(matrix, 0)
     return matrix
+
 def discrepancy_function(params, empirical_fc, N, steps_eq, steps_mc, Jij=None, mu=None,global_results=None,global_results_2=None):
     """Calculate discrepancy between empirical and simulated FC."""
 
@@ -538,6 +597,7 @@ def discrepancy_function(params, empirical_fc, N, steps_eq, steps_mc, Jij=None, 
         distance = 2
 
     return distance
+
 def load_matrix(filepath, dtype=np.float64):
     extension = filepath.split('.')[-1]
     if str(extension) == 'csv':
@@ -548,6 +608,7 @@ def load_matrix(filepath, dtype=np.float64):
         return scipy.io.loadmat(filepath)
     elif str(extension) == 'npz':
         return np.load(filepath)
+
 def extract_rho(path):
     time_series = np.squeeze(load_matrix(path))
     time_series = np.asarray(time_series)
@@ -776,6 +837,7 @@ def calculate_matrix_correlations_and_norms_upper(empirical_fc, simulated_fc, ji
     }
 
     return results
+
 def evaluate_similarity(correlation, frobenius_norm):
     """
     Evaluates the similarity based on correlation and Frobenius norm.

@@ -1,4 +1,4 @@
-from Full_Core_Seed_parallelised import *
+from Full_Core_Seed_New_Testing import *
 
 
 def run_analysis(base_folder, base_output_root, num_runs=10):
@@ -37,8 +37,8 @@ def run_analysis(base_folder, base_output_root, num_runs=10):
 
 if __name__ == "__main__":
     base_folder = r"/media/brainlab-qm/Seagate Portable Drive/Data Dilanjan/Data/Mean_84"
-    base_output_root = r"/media/brainlab-qm/Seagate Portable Drive/Data Dilanjan/Ising_outputs/Test_84_no_muorJij/Run_84_parallel"
+    base_output_root = r"/media/brainlab-qm/Seagate Portable Drive/Data Dilanjan/Ising_outputs/Test_84_no_muorJij/Run_84_parallel_New_mixed_5_FC"
     os.makedirs(base_output_root,exist_ok=True)
-    num_runs = 10  # Specify the number of runs you want to execute
+    num_runs = 5  # Specify the number of runs you want to execute
 
     run_analysis(base_folder, base_output_root, num_runs)
